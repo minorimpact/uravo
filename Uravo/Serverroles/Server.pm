@@ -353,7 +353,7 @@ sub graph {
     eval {
         if ($uravo->{config}->{influxdb_server}) {
             my $metric = "$graph_id,server_id=" . $self->id() . ",cluster_id=" . $self->cluster_id();
-            MinorImpact::InfluxDB::influxdb({ db => 'uravo',       metric => $metric, remote => $uravo->{config}->{influxdb_server}, value => $value });
+            Uravo::InfluxDB::influxdb({ db => 'uravo',       metric => $metric, remote => $uravo->{config}->{influxdb_server}, value => $value });
         }
     };
     #eval {
