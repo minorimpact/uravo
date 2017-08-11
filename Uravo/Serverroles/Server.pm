@@ -4,9 +4,8 @@ use strict;
 
 use Data::Dumper;
 
-use MinorImpact::InfluxDB;
-
 use Uravo::Serverroles::Interface;
+use Uravo::InfluxDB;
 use Uravo::Pylon;
 
 my $uravo;
