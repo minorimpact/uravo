@@ -50,7 +50,7 @@ sub run {
         if ($mem_total) {
             $cache_percent = ($mem_used / $mem_total) * 100;
             #$mem_percent = (($mem_used - $buffers_used) / $mem_total) * 100;
-            $mem_percent = (($mem_free) / $mem_total) * 100;
+            $mem_percent = (($mem_total - $mem_free) / $mem_total) * 100;
         }
     }
     if ($free =~ /Swap:\s+(\d+)\s+(\d+)\s+(\d+)/s) {
