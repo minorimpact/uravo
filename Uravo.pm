@@ -2,24 +2,24 @@ package Uravo;
 
 use strict;
 
-use Data::Dumper;
-use DBI;
+use Uravo::Config;
+use Uravo::Serverroles::Server;
+use Uravo::Serverroles::Cluster;
+use Uravo::Serverroles::Type;
+use Uravo::Serverroles::BU;
+use Uravo::Serverroles::Silo;
+use Uravo::Serverroles::Rack;
+use Uravo::Serverroles::Netblock;
+use Uravo::Serverroles::Cage;
+use Uravo::Serverroles::Module;
+use Socket;
 use Digest::MD5 qw(md5_hex);
 use JSON;
-use Socket;
-use Uravo::Config;
-use Uravo::Event;
-use Uravo::Serverroles::BU;
-use Uravo::Serverroles::Cage;
-use Uravo::Serverroles::Cluster;
-use Uravo::Serverroles::Module;
-use Uravo::Serverroles::Netblock;
-use Uravo::Serverroles::Rack;
-use Uravo::Serverroles::Server;
-use Uravo::Serverroles::Silo;
-use Uravo::Serverroles::Type;
+use DBI;
+use Data::Dumper;
 
 my $uravo;
+
 
 #$SIG{__DIE__} = sub {
 #    my $message = shift;
@@ -68,8 +68,6 @@ sub new {
     return $uravo;
 }
 
-# Reread the configs, recreate the database connection and reload
-# all the settings.
 sub reload {
     my $self = shift || return;
     $self->log("Uravo::reload()", 5);
@@ -82,6 +80,7 @@ sub reload {
         $self->{settings}->{$setting->{name}} = $setting->{value};
     }
 }
+
 
 my $COLOR   = { default=> { page=>'FFFFFF',
                             menu=>'F3F3F3',
@@ -118,6 +117,7 @@ sub getCage {
     $self->log("Uravo::getCage()", 5);
     return new Uravo::Serverroles::Cage($cage_id, $params);
 }
+
 
 sub getEvent {
     my $self = shift || return;
@@ -598,6 +598,7 @@ sub setCache {
 
 sub clearCache {
     my $self = shift || return;
+    my $key = shift;
 
     $self->log("Uravo::setCache()", 5);
 
@@ -615,7 +616,13 @@ sub clearCache {
         my $oldh = select(SOCK);
         $| = 1;
         select($oldh);
-        print SOCK "clear\n";
+        # TODO: Make this support clearning wildcarts, like "Type::_list:*"
+        if (defined($key) and $key ne "") {
+            print SOCK "clear|$key\n";
+        } 
+        else {
+            print SOCK "clear\n";
+        }
         close(SOCK);
         alarm(0);
     };
@@ -638,6 +645,5 @@ sub DESTROY {
         $self->{db}->close();
     }
 }
-
 
 1;
