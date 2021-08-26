@@ -2,8 +2,9 @@ package Uravo::Serverroles::Type;
 
 use strict;
 
-use Uravo;
 use Data::Dumper;
+use MinorImpact::Util;
+use Uravo;
 
 my $uravo;
 
@@ -36,7 +37,6 @@ sub add {
     my $changelog = shift || {note=>'Uravo::Serverroles::Type::add()', user=>$0};
 
     my $type_id = $params->{type_id} || return;
-
 
     $uravo ||= new Uravo;
     my $insert_type = $uravo->{db}->do("insert into type (type_id, create_date) values (?, now())",undef, ($type_id)) || die($uravo->{db}->errstr);
@@ -173,6 +173,19 @@ sub update {
     }
 
     if ($field eq 'modules') {
+        if (ref($value) ne "HASH") {
+            my $new_value = {};
+            foreach my $mod (split(',',$value)) {
+                if ($mod =~s/\:(\S+)//) {
+                    $new_value->{$mod} = MinorImpact::Util::isTrue($1);
+                }
+                else {
+                    $new_value->{$mod} = 1;
+                }
+            }
+            $value = $new_value;
+        }
+                    
         my $type_module = $uravo->{db}->selectall_arrayref("SELECT module_id,enabled from type_module WHERE type_id=?", {Slice=>{}}, ($self->id())) || die($uravo->{db}->errstr);
         # Scan the database for modules to delete.
         foreach my $dbmodule (@$type_module) {
@@ -339,6 +352,8 @@ sub delete {
     $uravo->{db}->do("delete from changelog where object_id=? and object_type='type'", undef, ($type_id)) || die($uravo->{db}->errstr);
     $uravo->{db}->do("delete from type where type_id=?", undef, ($type_id)) || die($uravo->{db}->errstr);
 
+    # TODO: This should clear the cache.  There might be a mechanism somewhere in here to "clear all items that contain this value" -- that
+    #       sounds vaguely familiar, but it may have been a different project.
     return;
 }
 
