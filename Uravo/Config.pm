@@ -1,10 +1,12 @@
 package Uravo::Config;
 
+use MinorImpact::Config;
+
 my $config_file;
-if (-f $ENV{URAVO_CONFIG}) {
+if (defined($ENV{URAVO_CONFIG}) && -f $ENV{URAVO_CONFIG}) {
     $config_file = $ENV{URAVO_CONFIG};
-} elsif (-f $ENV{HOME} . "/uravo.conf") {
-    $config_file = $ENV{HOME} . "/uravo.conf";
+} elsif (defined($ENV{HOME}) && -f "$ENV{HOME}/uravo.conf") {
+    $config_file = "$ENV{HOME}/uravo.conf";
 } else {
     $config_file = "/etc/uravo.conf";
 }
@@ -37,6 +39,4 @@ sub new {
     bless($self);
     return $self;
 }
-
-
 

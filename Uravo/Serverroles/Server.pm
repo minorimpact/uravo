@@ -353,7 +353,7 @@ sub graph {
     eval {
         if ($uravo->{config}->{influxdb_server}) {
             my $metric = "$graph_id,server_id=" . $self->id() . ",cluster_id=" . $self->cluster_id();
-            Uravo::InfluxDB::influxdb({ db => 'uravo',       metric => $metric, remote => $uravo->{config}->{influxdb_server}, value => $value });
+            Uravo::InfluxDB::influxdb({ db => 'uravo', metric => $metric, remote => $uravo->{config}->{influxdb_server}, value => $value });
         }
     };
     #eval {
@@ -495,7 +495,10 @@ sub update {
                 }
                 $self->{type_ids} = $value;
             } else {
-                $uravo->{db}->do("INSERT INTO server_type (server_id, type_id, create_date) values (?, ?, NOW())", undef, ($self->id(), $value)) || die ($uravo->{db}->errstr);
+                my @types = split(',', $value);
+                for my $type (@types) {
+                    $uravo->{db}->do("INSERT INTO server_type (server_id, type_id, create_date) values (?, ?, NOW())", undef, ($self->id(), $type)) || die ($uravo->{db}->errstr);
+                }
             }
         #}
         return $changelog;

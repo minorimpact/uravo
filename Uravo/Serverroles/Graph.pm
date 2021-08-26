@@ -1,6 +1,7 @@
 package Uravo::Serverroles::Graph;
 
 use strict;
+
 use Uravo;
 use Uravo::Pylon;
 use CGI;
@@ -11,7 +12,6 @@ my $uravo;
 
 sub new {
     my $self        = {};
-    use Data::Dumper;
     my $package     = shift || return;
     my $server_id   = shift || return;
     my $graph_id    = shift || return;
@@ -138,6 +138,5 @@ sub ensmoothen_graph_data {
 
     return $smooth_data;
 }
-
 
 1;

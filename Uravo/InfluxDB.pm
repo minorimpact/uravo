@@ -1,9 +1,9 @@
 package Uravo::InfluxDB;
 
+use Data::Dumper;
 use HTTP::Request;
 use LWP::UserAgent;
 use Socket;
-use Data::Dumper;
 
 sub influxdb {
     my $params = shift || return;
@@ -15,7 +15,7 @@ sub influxdb {
     my $remote = $params->{remote} || "influxdb";
     my $port = $params->{port} || 8086;
 
-    $metric =~s/^([^,]+),([^,=]+),/\1.\2,/;
+    $metric =~s/^([^,]+),([^,=]+),/$1.$2,/;
     my $data = "$metric value=$value";
     #print "\$data='$data'\n";
     my $UA = new LWP::UserAgent();

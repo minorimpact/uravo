@@ -2,24 +2,24 @@ package Uravo;
 
 use strict;
 
-use Uravo::Config;
-use Uravo::Serverroles::Server;
-use Uravo::Serverroles::Cluster;
-use Uravo::Serverroles::Type;
-use Uravo::Serverroles::BU;
-use Uravo::Serverroles::Silo;
-use Uravo::Serverroles::Rack;
-use Uravo::Serverroles::Netblock;
-use Uravo::Serverroles::Cage;
-use Uravo::Serverroles::Module;
-use Socket;
+use Data::Dumper;
+use DBI;
 use Digest::MD5 qw(md5_hex);
 use JSON;
-use DBI;
-use Data::Dumper;
+use Socket;
+use Uravo::Config;
+use Uravo::Event;
+use Uravo::Serverroles::BU;
+use Uravo::Serverroles::Cage;
+use Uravo::Serverroles::Cluster;
+use Uravo::Serverroles::Module;
+use Uravo::Serverroles::Netblock;
+use Uravo::Serverroles::Rack;
+use Uravo::Serverroles::Server;
+use Uravo::Serverroles::Silo;
+use Uravo::Serverroles::Type;
 
 my $uravo;
-
 
 #$SIG{__DIE__} = sub {
 #    my $message = shift;
@@ -68,6 +68,8 @@ sub new {
     return $uravo;
 }
 
+# Reread the configs, recreate the database connection and reload
+# all the settings.
 sub reload {
     my $self = shift || return;
     $self->log("Uravo::reload()", 5);
@@ -80,7 +82,6 @@ sub reload {
         $self->{settings}->{$setting->{name}} = $setting->{value};
     }
 }
-
 
 my $COLOR   = { default=> { page=>'FFFFFF',
                             menu=>'F3F3F3',
@@ -116,6 +117,22 @@ sub getCage {
 
     $self->log("Uravo::getCage()", 5);
     return new Uravo::Serverroles::Cage($cage_id, $params);
+}
+
+sub getEvent {
+    my $self = shift || return;
+    my $id = shift || return;
+
+    $self->log("Uravo::getEvent()", 5);
+    return new Uravo::Event($id);
+}
+
+sub getEvents {
+    my $self = shift || return;
+    my $params = shift || {};
+
+    $self->log("Uravo::getEvents()", 5);
+    return Uravo::Event::list($params);
 }
 
 sub getNetblocks {
@@ -398,7 +415,6 @@ sub menu {
     return $ret;
 }   
 
-
 sub changelog {
     my $self = shift || return;
     my $params = shift || return;
@@ -502,7 +518,6 @@ sub escalation_map {
 
     return $escalation_map;
 }
-
 
 sub getCache {
     my $self = shift || return;
@@ -613,80 +628,15 @@ sub alert {
 
     $self->log("Uravo::alert()", 5);
 
-    return unless ($data->{server_id} && $data->{AlertGroup} && $data->{Severity} && $data->{Summary});
-
-    my $server = $self->getServer($data->{server_id});
-    next unless ($server);
-
-    $data->{cluster_id} = $server->cluster_id();
-    if (!defined($data->{AdditionalInfo})) {
-        $data->{AdditionalInfo} = '';
-    }
-    if (!defined($data->{AlertKey}) && defined($data->{AlertGroup})) {
-        $data->{AlertKey} = $data->{AlertGroup};
-    }
-    if (!defined($data->{Recurring})) {
-        $data->{Recurring} = 0;
-    }
-    if (!defined($data->{Timeout})) {
-        $data->{Timeout} = 0;
-    } elsif ($data->{Timeout} < 1440) {
-        $data->{Timeout} = time() + ($data->{Timeout} * 60);
-    }
-
-    print "  $data->{server_id}: $data->{Severity} - $data->{Summary}\n" if ($uravo->{options}->{verbose});
-    if ($data->{Severity} eq 'red') { $data->{Severity} = 4; }
-    elsif ($data->{Severity} eq 'orange') { $data->{Severity} = 4; }
-    elsif ($data->{Severity} eq 'yellow') { $data->{Severity} = 3; }
-    elsif ($data->{Severity} eq 'blue') { $data->{Severity} = 2; }
-    elsif ($data->{Severity} eq 'gray') { $data->{Severity} = 1; }
-    elsif ($data->{Severity} eq 'green') { $data->{Severity} = 0; }
-
-    foreach my $key (keys %$data) {
-        my $value = $data->{$key};
-        $value = substr($value, 0, 16384);
-        #$value =~s/\n/_CR_/g;
-        #$value =~s/\|/_PIPE_/g;
-        #$value =~s/'/_APOST_/g;
-        if ($value && $value < .001 && $value=~/^[0-9.e-]+$/) {
-            $value = sprintf("%.8f", $value);
-        }
-        $data->{$key} = $value;
-    }
-
-    unless (defined($data->{Agent}) && $data->{Agent}) {
-        $data->{Agent} = "$self->{server_id}:$self->{script_name}";
-    }
-    $data->{Identifier} = "$data->{server_id} $data->{AlertGroup} $data->{AlertKey} SOCKET";
-
-    # Add a record to the summary table.
-    my $sql = "INSERT INTO alert_summary (server_id, AlertGroup, Agent, recurring, mod_date) VALUES (?,?,?,?, NOW()) ON DUPLICATE KEY UPDATE mod_date=NOW(), reported=0, recurring=?";
-    $self->{db}->do($sql, undef, ($data->{server_id}, $data->{AlertGroup}, $data->{Agent}, $data->{Recurring}), $data->{Recurring}) || die($self->{db}->errstr);
-    if ($data->{Recurring}) {
-        $sql = "UPDATE alert SET Severity=0 WHERE AlertGroup='timeout' AND AlertKey=? AND server_id=?";
-        $self->{db}->do($sql, undef, ("$data->{AlertGroup}", $data->{server_id})) || die($self->{db}->errstr);
-    }
-
-    my $alerts = $self->getCache("active_alerts");
-    if (!$alerts) {
-        $alerts = $self->{db}->selectall_hashref("SELECT Identifier, Severity FROM alert WHERE Severity > 0", "Identifier");
-        $self->setCache("active_alerts", $alerts);
-    }
-
-    return unless ($data->{Severity} > 0 || defined($alerts->{$data->{Identifier}}));
-
-    $sql = "INSERT INTO new_alert (`" . join("`,`", sort keys %$data) . "`) VALUES (" . join(",", map { '?' } keys %$data) .")";
-    eval {
-        $self->{db}->do($sql, undef, map { $data->{$_}} sort keys %$data)|| die($self->{db}->errstr);
-    };
-    print "$@\n" if ($@);
-    return;
+    return new Uravo::Event($data);
 }
 
 sub DESTROY {
     my $self = shift || return;
     $self->log("Uravo::DESTROY()", 5);
-    $self->{db}->close();
+    if (defined($self->{db})) {
+        $self->{db}->close();
+    }
 }
 
 

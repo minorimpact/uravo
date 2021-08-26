@@ -2,9 +2,9 @@ package Uravo::Agent::procs;
 
 use strict;
 
+use Data::Dumper;
 use Uravo;
 use Uravo::Util;
-use Data::Dumper;
 
 my $uravo;
 

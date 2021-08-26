@@ -283,7 +283,7 @@ sub link {
 
     foreach my $link (split(/\s+/, $links)) {
         if ($link eq 'config') {
-            $ret    .= "<a href='/cgi-bin/edittype.cgi?type_id=${\ $self->id(); }' title='Configure ${\ $self->name(); }'><img name='${\ $self->id(); }-$link' src=$image_base/config-button.gif width=15 height=15 border=0></a>\n";
+            $ret    .= "<a href='/cgi-bin/index.cgi?a=edittype&type_id=${\ $self->id(); }' title='Configure ${\ $self->name(); }'><img name='${\ $self->id(); }-$link' src=$image_base/config-button.gif width=15 height=15 border=0></a>\n";
         }
         if ($link eq 'graphs' ) {
             $ret    .= "<a href='/cgi-bin/graph.cgi?type_id=${\ $self->id(); }&server_id=all' title='View graphs for ${\ $self->name(); }'><img src=$image_base/graph-button.gif width=15 height=15 border=0></a>\n";
