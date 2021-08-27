@@ -173,7 +173,14 @@ sub update {
     }
 
     if ($field eq 'modules') {
+        my $mode = 0;
         if (ref($value) ne "HASH") {
+            if ($value =~s/^\+//) {
+                $mode = 1;
+            } 
+            elsif ($value =~s/^\-//) {
+                $mode = -1;
+            } 
             my $new_value = {};
             foreach my $mod (split(',',$value)) {
                 if ($mod =~s/\:(\S+)//) {
@@ -187,7 +194,7 @@ sub update {
         }
                     
         my $type_module = $uravo->{db}->selectall_arrayref("SELECT module_id,enabled from type_module WHERE type_id=?", {Slice=>{}}, ($self->id())) || die($uravo->{db}->errstr);
-        # Scan the database for modules to delete.
+        # Delete modules that are in the database but are not in our new list.
         foreach my $dbmodule (@$type_module) {
             my $done = 0;
             foreach my $module_id ( keys %$value ) {
@@ -199,25 +206,26 @@ sub update {
                     last;
                 }
             }
-            if (!$done) {
+            if ((!$done and $mode == 0) or ($done and $mode < 0)) {
                 $uravo->{db}->do("delete from type_module where type_id=? and module_id=?", undef, ($self->id(), $dbmodule->{module_id})) || die($uravo->{db}->errstr);
                 $uravo->changelog({object_type=>$self->{object_type},object_id=>$self->id(),field_name=>'deleted module', old_value=>$dbmodule->{module_id}},$changelog);
             }
         }
 
-        # Scan the databse for new modules to add.
+        # Add modules that are in our list but not in the database.
         foreach my $module_id ( keys %$value ) {
             my $done = 0;
             foreach my $dbmodule (@$type_module) {
                 if ($module_id eq $dbmodule->{module_id}) {
+                    # TODO: I don't *think* we need to do this again? We should have gotten all the common items in the delete loop
+                    #if ($value->{$module_id} != $dbmodule->{enabled}) {
+                    #    $uravo->{db}->do("UPDATE type_module SET enabled=? WHERE type_id=? and module_id=?", undef, ($value->{$module_id}, $self->id(), $module_id)) || die($uravo->{db}->errstr);
+                    #}
                     $done = 1;
-                    if ($value->{$module_id} != $dbmodule->{enabled}) {
-                        $uravo->{db}->do("UPDATE type_module SET enabled=? WHERE type_id=? and module_id=?", undef, ($value->{$module_id}, $self->id(), $module_id)) || die($uravo->{db}->errstr);
-                    }
                     last;
                 }
             }
-            if (!$done) {
+            if ($done == 0 and $mode >= 0) {
                 $uravo->{db}->do("insert into type_module (type_id, module_id, enabled)  values (?, ?, ?)", undef, ($self->id(), $module_id, $value->{$module_id})) || die($uravo->{db}->errstr);
                 $uravo->changelog({object_type=>$self->{object_type},object_id=>$self->id(),field_name=>'added module', new_value=>$module_id},$changelog);
             }
