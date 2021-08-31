@@ -1,0 +1,3 @@
+USE URAVO;
+
+ALTER TABLE type_module ADD enabled BOOLEAN DEFAULT TRUE NOT NULL AFTER module_id;
