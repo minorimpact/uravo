@@ -1,7 +1,7 @@
 Summary: Uravo Code Library
 Name: perl-Uravo
-Version: 0.0.2
-Release: 3
+Version: 0.0.14
+Release: 1
 Epoch: 0
 License: GPL
 URL: http://www.minorimpact.com

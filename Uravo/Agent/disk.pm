@@ -98,8 +98,8 @@ sub run {
                 my $rate = ($used - $last_used)/$seconds;
                 my $timetofill = ($rate > 0) ? ($available / $rate) / 60:0;
 
+                my $Severity = "green";
                 if ($timetofill) {
-                    my $Severity = "green";
                     if (!$monitoringValues->{'disk_fill'}{'disabled'} && $timetofill < $monitoringValues->{'disk'}{'rate'}{'red'}) {
                         $Severity = "red";
                     } elsif (!$monitoringValues->{'disk_fill'}{'disabled'} && $timetofill < $monitoringValues->{'disk'}{'rate'}{'yellow'}) {
@@ -137,8 +137,8 @@ sub run {
                 my $rate = ($disk->{current} - $last_inode)/$seconds;
                 my $timetofill = ($rate > 0) ? ($available / $rate) / 60:0;
 
+                my $Severity = 'green';
                 if ($timetofill) {
-                    my $Severity = 'green';
                     if ($timetofill <  $monitoringValues->{inode_fill}{red} && !$monitoringValues->{inode_fill}{disabled}) {
                         $Severity = "red";
                     } elsif ($timetofill < $monitoringValues->{inode_fill}{yellow} && !$monitoringValues->{inode_fill}{disabled}) {
@@ -180,9 +180,9 @@ sub run {
         # temperature check
         my $Severity = "green";
         my ($temp_c, $temp_f) = $smart->get_disk_temp($dev);
-        if ($temp_f <  $monitoringValues->{disk_temp}{red} && !$monitoringValues->{disk_smart_temp}{disabled}) {
+        if (int($temp_f) >  int($monitoringValues->{disk_temp}{red}) && !$monitoringValues->{disk_temp}{disabled}) {
             $Severity = "red";
-        } elsif ($temp_f < $monitoringValues->{disk_temp}{yellow} && !$monitoringValues->{disk_smart_temp}{disabled}) {
+        } elsif (($temp_f) > ($monitoringValues->{disk_temp}{yellow}) && !$monitoringValues->{disk_temp}{disabled}) {
             $Severity = "yellow";
         }
         $Summary = sprintf("$disk->{diskname} temperature: %d", $temp_f);
