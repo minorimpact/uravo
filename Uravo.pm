@@ -3,6 +3,7 @@ package Uravo;
 use strict;
 
 use Uravo::Config;
+use Uravo::Event;
 use Uravo::Serverroles::Server;
 use Uravo::Serverroles::Cluster;
 use Uravo::Serverroles::Type;
@@ -27,7 +28,7 @@ my $uravo;
 #    $uravo->log($message, 1);
 #};
 
-our $VERSION = "0.0.13";
+our $VERSION = "0.0.14";
 
 sub new {
     my $class = shift || return;;
@@ -616,7 +617,7 @@ sub clearCache {
         my $oldh = select(SOCK);
         $| = 1;
         select($oldh);
-        # TODO: Make this support clearning wildcarts, like "Type::_list:*"
+        # TODO: Make this support clearning wildcards, like "Type::_list:*"
         if (defined($key) and $key ne "") {
             print SOCK "clear|$key\n";
         } 

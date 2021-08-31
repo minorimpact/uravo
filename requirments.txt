@@ -13,3 +13,4 @@ Cache::Memcached
 CHI
 Text::Markdown
 Template
+Disk::SMART
