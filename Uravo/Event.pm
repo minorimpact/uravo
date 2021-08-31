@@ -93,14 +93,14 @@ sub new {
         $id = $data->{Identifier};
     }
 
-    my $sql = "SELECT * FROM alert WHERE Identifier = ?";
+    my $sql = $id=~/^\d+$/ ? "SELECT * FROM alert WHERE Serial = ?" :  "SELECT * FROM alert WHERE Identifier = ?";
     #print "$sql, $id\n";
 
     # Prepare it
     my $alerts = $uravo->{db}->selectall_arrayref($sql, {Slice=>{}}, ($id)) || die("Can't select alerts: " . $uravo->{db}->errstr);
 
     foreach my $alert (@$alerts) {
-        if ($alert->{Identifier} eq $id) {
+        if ($alert->{Identifier} eq $id || $alert->{Serial} == $id) {
             $self = $alert;
         }
     }
@@ -180,7 +180,7 @@ sub list {
 sub toString {
     my $self = shift || return;
 
-    $output = sprintf("%-40s %19s %-10s %-8s %4d %20s", $self->{Identifier}, $self->{LastOccurrence}, $self->{server_id}, $SEVERITY->{$self->{Severity}}, $self->{Tally}, $self->{Summary});
+    $output = sprintf("%d %19s %-10s %-8s %4d %20s", $self->{Serial}, $self->{LastOccurrence}, $self->{server_id}, $SEVERITY->{$self->{Severity}}, $self->{Tally}, $self->{Summary});
     return $output;
 }
 
