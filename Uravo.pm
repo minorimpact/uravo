@@ -95,25 +95,22 @@ my $COLOR   = { default=> { page=>'FFFFFF',
 
 sub updateThresholds {
     my $self = shift || return;
-    my $data = shift || return;
+    my $params = shift || return;
 
-        if ($data->{default}) {
-            
-        }
-        my $AlertGroup = $data->{AlertGroup} || return;
-        my $AlertKey = $data->{AlertKey} || "";
-        my $red = $data->{red} || return;
-        my $yellow = $data->{yellow};
-        my $disabled = MinorImpact::isTrue($data->{disbled}) ? 1 : 0;
-        my $default = defined($data->{default}) ? 1 : 0;
+        my $AlertGroup = $params->{AlertGroup} || return;
+        my $AlertKey = $params->{AlertKey} || "";
+        my $red = $params->{red} || return;
+        my $yellow = $params->{yellow};
+        my $disabled = MinorImpact::isTrue($params->{disbled}) ? 1 : 0;
+        my $default = defined($params->{default}) ? 1 : 0;
         if ($default) {
             my $sql = "INSERT INTO monitoring_default_values (AlertGroup, AlertKey, red, yellow, disabled, create_date) VALUES (?, ?, ?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE red=?, yellow=?, disabled=?, mod_date=NOW()";
             my @values = ($AlertGroup, $AlertKey, $red, $yellow, $disabled, $red, $yellow, $disabled);
             $self->{db}->do($sql, undef, @values);
         } else {
-            my $server_id = $data->{server_id} || "";
-            my $cluster_id = $data->{cluster_id} || "";
-            my $type_id = $data->{cluster_id} || "";
+            my $server_id = $params->{server_id} || "";
+            my $cluster_id = $params->{cluster_id} || "";
+            my $type_id = $params->{cluster_id} || "";
             my $sql = "INSERT INTO monitoring_values (AlertGroup, AlertKey, cluster_id, type_id, server_id, red, yellow, disabled, create_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE red=?, yellow=?, disabled=?, mod_date=NOW()";
             my @values = ($AlertGroup, $AlertKey, $cluster_id, $type_id, $server_id, $red, $yellow, $disabled, $red, $yellow, $disabled);
             $self->{db}->do($sql, undef, @values);
