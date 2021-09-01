@@ -27,8 +27,14 @@ sub new {
             if ($value =~/^"(.+)"$/) {
                 $value = $1;
             }
-            my @values = split(/,/, $value);
-            $self->{$key} = $values[int(rand(scalar(@values)))] || $value;
+            # This is the weirdest thing I've come across.  I thought the best option here
+            #    was to split any value that contained a comma and randomly return one
+            #    of the elements.  And I completely ignored the *quotation marks* I dealt
+            #    with on the previous line!
+            #my @values = split(/,/, $value);
+            #$self->{$key} = $values[int(rand(scalar(@values)))] || $value;
+
+            $self->{$key} = $value;
         }
     }
 

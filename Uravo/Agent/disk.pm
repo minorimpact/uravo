@@ -159,34 +159,70 @@ sub run {
     }
 
     # Check SMART values, if available
-    foreach my $disk (values %$df) {
-        my $dev = $disk->{dev};
-        next unless ($dev =~s/\/dev\/sd([a-z])\d+/\/dev\/sd\1/);
-        my $smart;
-        eval {
-            $smart = Disk::SMART->new($dev);
-        };
-        next if (!defined($smart) or $@);
+    if ($ENV{USER} == "root") {
+        my $done_dev = {};
+        foreach my $disk (values %$df) {
+            my $dev = $disk->{dev};
+            next unless ($dev =~s/\/dev\/sd([a-z])\d+/\/dev\/sd\1/);
+            # df lists volumes, we just want to do each physical device once.
+            next if (defined($done_dev->{$dev}));
 
-        # health check
-        my $Severity = "green";
-        my $health = $smart->get_disk_health($dev);
-        if ($health != "PASSED") {
-            $Severity = "red";
-        }
-        $Summary = sprintf("$disk->{diskname} disk health %s", $health);
-        $server->alert({Recurring=>1, Severity=>$Severity, AlertGroup=>"disk_health", AlertKey=>$disk->{diskname}, Summary=>$Summary}) unless ($options->{dryrun});
+            my $smart;
+            eval {
+                $smart = Disk::SMART->new($dev);
+            };
+            next if (!defined($smart) or $@);
 
-        # temperature check
-        my $Severity = "green";
-        my ($temp_c, $temp_f) = $smart->get_disk_temp($dev);
-        if (int($temp_f) >  int($monitoringValues->{disk_temp}{red}) && !$monitoringValues->{disk_temp}{disabled}) {
-            $Severity = "red";
-        } elsif (($temp_f) > ($monitoringValues->{disk_temp}{yellow}) && !$monitoringValues->{disk_temp}{disabled}) {
-            $Severity = "yellow";
+            # health check
+            my $Severity = "green";
+            my $health = $smart->get_disk_health($dev);
+            if ($health != "PASSED") {
+                $Severity = "red";
+            }
+            $Summary = sprintf("$dev disk health %s", $health);
+            $server->alert({Recurring=>1, Severity=>$Severity, AlertGroup=>"disk_health", AlertKey=>$dev, Summary=>$Summary}) unless ($options->{dryrun});
+
+            # temperature check
+            my $Severity = "green";
+            my ($temp_c, $temp_f) = $smart->get_disk_temp($dev);
+            if (int($temp_f) >  int($monitoringValues->{disk_temp}{red}) && !$monitoringValues->{disk_temp}{disabled}) {
+                $Severity = "red";
+            } elsif (($temp_f) > ($monitoringValues->{disk_temp}{yellow}) && !$monitoringValues->{disk_temp}{disabled}) {
+                $Severity = "yellow";
+            }
+            $Summary = sprintf("$dev temperature: %d", $temp_f);
+            $server->alert({Recurring=>1, Severity=>$Severity, AlertGroup=>"disk_temp", AlertKey=>$dev, Summary=>$Summary}) unless ($options->{dryrun});
+            $done_dev->{$dev} = 1;
         }
-        $Summary = sprintf("$disk->{diskname} temperature: %d", $temp_f);
-        $server->alert({Recurring=>1, Severity=>$Severity, AlertGroup=>"disk_temp", AlertKey=>$disk->{diskname}, Summary=>$Summary}) unless ($options->{dryrun});
+    }
+
+    if ($uravo->{config}{disk_write}) {
+        my @partitions = split(/,/, $uravo->{config}{disk_write});
+        my $test_data = {};
+        foreach my $part (@partitions) {
+            $part =~s/\/$//;
+            print("writing $part\n") if ($options->{verbose});
+            open(foo, '>', "$part/foo");
+            $test_data->{$part} = int(rand(10000));
+            print foo $test_data->{$part};
+            close(foo);
+        }
+        sleep(1);
+        foreach my $part (@partitions) {
+            $part =~s/\/$//;
+            print("reading $part\n") if ($options->{verbose});
+            open(foo, '<', "$part/foo");
+            read(foo, my $val, 5);
+            close(foo);
+            my $Severity = "green";
+            my $Summary = "$part is writeable";
+            if ($val != $test_data->{$part}) {
+                $Severity = "red";
+                $Summary = "$part is not writeable";
+            }
+            unlink("$part/foo");
+            $server->alert({Recurring=>1, Severity=>$Severity, AlertGroup=>"disk_write", AlertKey=>$part, Summary=>$Summary}) unless ($options->{dryrun});
+        }
     }
 
     $server->setLast('disk', 'time', time()) unless ($options->{dryrun});
