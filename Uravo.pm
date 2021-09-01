@@ -102,15 +102,17 @@ sub updateThresholds {
         my $red = $params->{red} || return;
         my $yellow = $params->{yellow};
         my $disabled = MinorImpact::isTrue($params->{disbled}) ? 1 : 0;
-        my $default = defined($params->{default}) ? 1 : 0;
+        my $default = (defined($params->{default}) and MinorImpact::isTrue($params->{disbled})) ? 1 : 0;
+        my $server_id = $params->{server_id} || "";
+        my $cluster_id = $params->{cluster_id} || "";
+        my $type_id = $params->{cluster_id} || "";
+        $default = 1 if (($server_id == "" and $cluster_id == "" and $type_id == "" and $AlertKey == "") or (defined($params->{default}) and MinorImpact::isTrue($params->{default})));
+
         if ($default) {
             my $sql = "INSERT INTO monitoring_default_values (AlertGroup, AlertKey, red, yellow, disabled, create_date) VALUES (?, ?, ?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE red=?, yellow=?, disabled=?, mod_date=NOW()";
             my @values = ($AlertGroup, $AlertKey, $red, $yellow, $disabled, $red, $yellow, $disabled);
             $self->{db}->do($sql, undef, @values);
         } else {
-            my $server_id = $params->{server_id} || "";
-            my $cluster_id = $params->{cluster_id} || "";
-            my $type_id = $params->{cluster_id} || "";
             my $sql = "INSERT INTO monitoring_values (AlertGroup, AlertKey, cluster_id, type_id, server_id, red, yellow, disabled, create_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE red=?, yellow=?, disabled=?, mod_date=NOW()";
             my @values = ($AlertGroup, $AlertKey, $cluster_id, $type_id, $server_id, $red, $yellow, $disabled, $red, $yellow, $disabled);
             $self->{db}->do($sql, undef, @values);
