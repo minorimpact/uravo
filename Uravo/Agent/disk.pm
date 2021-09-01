@@ -185,9 +185,9 @@ sub run {
             # temperature check
             my $Severity = "green";
             my ($temp_c, $temp_f) = $smart->get_disk_temp($dev);
-            if (int($temp_f) >  int($monitoringValues->{disk_temp}{red}) && !$monitoringValues->{disk_temp}{disabled}) {
+            if (int($temp_f) >=  int($monitoringValues->{disk_temp}{red}) && !$monitoringValues->{disk_temp}{disabled}) {
                 $Severity = "red";
-            } elsif (($temp_f) > ($monitoringValues->{disk_temp}{yellow}) && !$monitoringValues->{disk_temp}{disabled}) {
+            } elsif (($temp_f) >= ($monitoringValues->{disk_temp}{yellow}) && !$monitoringValues->{disk_temp}{disabled}) {
                 $Severity = "yellow";
             }
             $Summary = sprintf("$dev temperature: %d", $temp_f);
@@ -202,25 +202,32 @@ sub run {
         foreach my $part (@partitions) {
             $part =~s/\/$//;
             print("writing $part\n") if ($options->{verbose});
-            open(foo, '>', "$part/foo");
+            if (!open(disk_write, '>', "$part/disk_write")) {
+                $server->alert({Severity=>"red", AlertGroup=>"disk_write_open", AlertKey=>$part, Summary=>"Can't open $part/disk_write for writing", AdditionalInfo=>$@}) unless ($options->{dryrun});
+                next;
+            }
             $test_data->{$part} = int(rand(10000));
-            print foo $test_data->{$part};
-            close(foo);
+            print disk_write $test_data->{$part};
+            close(disk_write);
         }
         sleep(1);
         foreach my $part (@partitions) {
             $part =~s/\/$//;
+            next if (!defined($test_data->{$part}));
             print("reading $part\n") if ($options->{verbose});
-            open(foo, '<', "$part/foo");
-            read(foo, my $val, 5);
-            close(foo);
+            if (!open(disk_write, '<', "$part/disk_write")) {
+                $server->alert({Severity=>$Severity, AlertGroup=>"disk_write_read", AlertKey=>$part, Summary=>"Can't open $part/disk_write for reading", AdditionalInfo=>$@}) unless ($options->{dryrun});
+                next;
+            }
+            read(disk_write, my $val, 5);
+            close(disk_write);
             my $Severity = "green";
             my $Summary = "$part is writeable";
             if ($val != $test_data->{$part}) {
                 $Severity = "red";
                 $Summary = "$part is not writeable";
             }
-            unlink("$part/foo");
+            unlink("$part/disk_write");
             $server->alert({Recurring=>1, Severity=>$Severity, AlertGroup=>"disk_write", AlertKey=>$part, Summary=>$Summary}) unless ($options->{dryrun});
         }
     }
