@@ -1,35 +1,23 @@
 package Uravo::Agent::bandwidth;
 
 use Data::Dumper;
-
-sub new {
-    my $class = shift || return;
-
-    my $self = {};
-
-    $uravo = new Uravo;
-
-    bless($self, $class);
-    return $self;
-}
+use parent 'Uravo::Agent::Module';
 
 sub run {
     my $self = shift || return;
-    my $server = $uravo->getServer() || return;
 
-    my $options = $uravo->{options};
-    my $monitoringValues = $server->getMonitoringValues();
+    my $options = $self->{uravo}->{options};
 
     my $short_rate_test_seconds = 3;
 
-    my $server_id = $server->id() || return;
+    my $self_id = $self->{server}->id() || return;
 
     my $now = time();
     my %if = getNetworkStats();
     sleep($short_rate_test_seconds);
     my %if2 = getNetworkStats();
 
-    my $then = $server->getLast('bandwidth',"time");
+    my $then = $self->{server}->getLast('bandwidth',"time");
     my $elapsed = ($now - $then) || 1;
 
     my $cnt = 0;
@@ -48,41 +36,29 @@ sub run {
         if ($inrate < 5000000 && $outrate < 5000000) {
             # If the short term rate is less than 5MB/sec, then use the value from the last time we ran,
             # which gives us an average over the last 5 minutes.  This is preferable.
-            my $lastin  = $server->getLast('bandwidth_rate', "$if{$interface}->{ip}-in");
-            my $lastout = $server->getLast('bandwidth_rate', "$if{$interface}->{ip}-out");
+            my $lastin  = $self->{server}->getLast('bandwidth_rate', "$if{$interface}->{ip}-in");
+            my $lastout = $self->{server}->getLast('bandwidth_rate', "$if{$interface}->{ip}-out");
 
             $inrate = bytes_per_sec($lastin, $if{$interface}->{in}, $elapsed);
             $outrate = bytes_per_sec($lastout, $if{$interface}->{out}, $elapsed);
         }
 
-        my $Severity = "green";
+        my $Severity = $self->getSeverity('bandwidth_rate', "$interface-in", $inrate);
         my $Summary = $if{$interface}->{name} . "-in: " . $inrate . " B/s";
-    
-        if ($inrate > $monitoringValues->{bandwidth_rate}{red} && !$monitoringValues->{bandwidth_rate}{disabled}) {
-            $Severity = 'red';
-        } elsif ($inrate > $monitoringValues->{bandwidth_rate}{yellow} && !$monitoringValues->{bandwidth_rate}{disabled}) {
-            $Severity = 'yellow';
-        }
-        $server->alert({AlertGroup=>'bandwidth_rate', AlertKey=>"$interface-in", Summary=>$Summary, Severity=>$Severity}); 
+        $self->{server}->alert({AlertGroup=>'bandwidth_rate', AlertKey=>"$interface-in", Summary=>$Summary, Severity=>$Severity}); 
 
-        my $Severity = "green";
+        my $Severity = $self->getSeverity('bandwidth_rate', "$interface-out", $outrate);
         my $Summary = $if{$interface}->{name} . "-out: " . $outrate . " B/s";
-        if ($outrate > $monitoringValues->{bandwidth_rate}{red} && !$monitoringValues->{bandwidth_rate}{disabled}) {
-            $Severity = 'red';
-        } elsif ($outrate > $monitoringValues->{bandwidth_rate}{yellow} && !$monitoringValues->{bandwidth_rate}{disabled}) {
-            $Severity = 'yellow';
-        }
-        $server->alert({AlertGroup=>'bandwidth_rate', AlertKey=>"$interface-out", Summary=>$Summary, Severity=>$Severity}); 
+        $self->{server}->alert({AlertGroup=>'bandwidth_rate', AlertKey=>"$interface-out", Summary=>$Summary, Severity=>$Severity}); 
 
-
-        $server->setLast('bandwidth_rate', "$if{$interface}->{ip}-in", $if{$interface}->{in});
-        $server->setLast('bandwidth_rate', "$if{$interface}->{ip}-out", $if{$interface}->{out});
+        $self->{server}->setLast('bandwidth_rate', "$if{$interface}->{ip}-in", $if{$interface}->{in});
+        $self->{server}->setLast('bandwidth_rate', "$if{$interface}->{ip}-out", $if{$interface}->{out});
  
-        $server->graph("bandwidth,$if{$interface}->{name}.in",$inrate);
-        $server->graph("bandwidth,$if{$interface}->{name}.out",$outrate);
+        $self->{server}->graph("bandwidth,$if{$interface}->{name}.in",$inrate);
+        $self->{server}->graph("bandwidth,$if{$interface}->{name}.out",$outrate);
     }
 
-    $server->setLast('bandwidth', "time", $now);
+    $self->{server}->setLast('bandwidth', "time", $now);
 }
 
 sub getNetworkStats {

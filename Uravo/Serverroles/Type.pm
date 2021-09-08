@@ -172,7 +172,7 @@ sub update {
         return $changelog;
     }
 
-    if ($field eq 'modules') {
+    if ($field =~/^module(s|_id)?$/) {
         my $mode = 0;
         if (ref($value) ne "HASH") {
             if ($value =~s/^\+//) {

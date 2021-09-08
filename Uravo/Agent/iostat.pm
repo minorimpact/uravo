@@ -3,31 +3,23 @@ package Uravo::Agent::iostat;
 use Uravo;
 use Uravo::Util;
 
-my $uravo;
-
-sub new {
-    my $class = shift || return;
-
-    my $self = {};
-
-    $uravo = new Uravo;
-
-    bless($self, $class);
-    return $self;
-}
+use parent 'Uravo::Agent::Module';
 
 sub run {
     my $self = shift || return;
+    my $uravo = $self->{uravo};
     my $server = $uravo->getServer() || return;
 
     my $options = $uravo->{options};
-    my $monitoringValues = $server->getMonitoringValues();
 
     my $cmd = '/usr/bin/iostat';
     if (! -f $cmd) {
         $server->alert({AlertGroup=>'iostat_file', Summary=>"$cmd does not exist.", Severity=>'red', Recurring=>1}) unless ($options->{dryrun});
+        return;
     }
-    $server->alert({AlertGroup=>'iostat_file', Summary=>"$cmd exists.", Severity=>'green', Recurring=>1}) unless ($options->{dryrun});
+    else {
+        $server->alert({AlertGroup=>'iostat_file', Summary=>"$cmd exists.", Severity=>'green', Recurring=>1}) unless ($options->{dryrun});
+    }
     my $IOSTAT = `$cmd -x 3 2`;
 
     #avg-cpu:  %user   %nice %system %iowait  %steal   %idle
@@ -50,22 +42,8 @@ sub run {
         @{$vals{$1}}{@keys}  =  ($1, $2, $3, $4, $5, $6 , $7 , $8, $9, $10, $11, $12 );
     }
 
-    my $Summary;
-    my $Severity = 'green';
-    my $iowait_yellow = $monitoringValues->{'iostat_iowait'}{'yellow'};
-    my $iowait_red = $monitoringValues->{'iostat_iowait'}{'red'};
-    if ($monitoringValues->{'iostat_iowait'}{'disabled'}) {
-        $Summary = "iowait: $iowait (DISABLED)";
-    } else {
-        if ($iowait > $iowait_red) {
-            $Summary .= "iowait: $iowait";
-        } elsif ($iowait > $iowait_yellow) {
-            $Severity = 'yellow';
-            $Summary .= "iowait: $iowait";
-        } else {
-            $Summary .= "iowait: $iowait";
-        }
-    }
+    my $Severity = $self->getSeverity('iostat_iowait', undef, $iowait);
+    my $Summary .= "iowait: $iowait";
     $server->alert({AlertGroup=>'iostat_iowait', Summary=>$Summary, Severity=>$Severity, Recurring=>1}) unless ($options->{dryrun});
 
     unless ($options->{dryrun}) {

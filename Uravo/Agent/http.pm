@@ -5,27 +5,17 @@ use Uravo;
 use Time::HiRes qw(gettimeofday tv_interval);
 use Uravo::Util;
 use LWP::UserAgent;
+use parent 'Uravo::Agent::Module';
 
-my $uravo;
 
-sub new {
-    my $class = shift || return;
-
-    my $self = {};
-
-    $uravo = new Uravo;
-
-    bless($self, $class);
-    return $self;
-}
 
 sub run {
-    my $self = shift || return;
-    my $server = shift || return;
+    my $self = shift || die;
+    my $server = shift || die;
 
-    my $local_server = $uravo->getServer();
+    my $local_server = $self->{server};
 
-    my $options = $uravo->{options};
+    my $options = $self->{options};
     my $UA = LWP::UserAgent->new(ssl_opts => { verify_hostname => 0 });
     $UA->agent("Mozilla");
     $UA->use_alarm(0);
@@ -35,15 +25,9 @@ sub run {
 
     my $server_id = $server->id();
     my $server_name = $server->name();
-    my $monitoringValues = $server->getMonitoringValues();
-
-    my $load_time_yellow = $monitoringValues->{http_load_time}{yellow};
-    my $load_time_red = $monitoringValues->{http_load_time}{red};
-    my $load_time_disabled = $monitoringValues->{http_load_time}{disabled};
 
     my $timeout_time = ($load_time_red ? $load_time_red + 1 : 10);
     $UA->timeout($timeout_time);
-
 
     my $url = "http://" . ($server->hostname() || $server_id) . "/";
     my $req = HTTP::Request->new(GET=>$url);
@@ -95,12 +79,8 @@ sub run {
         $server->alert({Summary=>"$url connected", Severity=>'green', AlertGroup=>'http_timeout'}) unless ($options->{dryrun});
         $server->alert({Summary=>"$url return code: $return_code", Severity=>'green', AlertGroup=>'http_return_code'}) unless ($options->{dryrun});
         $server->graph('http', $load_time);
-        $Severity = 'green';
-        if ($load_time > $load_time_red) {
-            $Severity = 'red';
-        } elsif ($load_time > $load_time_yellow) {
-            $Severity = 'yellow';
-        }
+
+        $Severity = $self->getSeverity('http_load_time', undef, $load_time);
         $Summary = "$url load time: $load_time";
         $server->alert({Summary=>$Summary, Severity=>$Severity, AlertGroup=>'http_load_time'}) unless ($options->{dryrun});
     }

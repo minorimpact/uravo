@@ -5,25 +5,14 @@ use strict;
 use Uravo;
 use Uravo::Util;
 
-my $uravo;
-
-sub new {
-    my $class = shift || return;
-
-    my $self = {};
-
-    $uravo = new Uravo;
-
-    bless($self, $class);
-    return $self;
-}
+use parent 'Uravo::Agent::Module';
 
 sub run {
     my $self = shift || return;
 
+    my $uravo = $self->{uravo};
     my $options = $uravo->{options};
-    my $server = $uravo->getServer() || die("Can't create server object.");
-    my $monitoringValues = $server->getMonitoringValues();
+    my $server = $self->{server};
 
     my $message;
     my %count;

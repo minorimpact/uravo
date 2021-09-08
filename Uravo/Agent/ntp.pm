@@ -2,26 +2,14 @@ package Uravo::Agent::ntp;
 
 use Uravo;
 use Uravo::Util;
-
-my $uravo;
-
-sub new {
-    my $class = shift || return;
-
-    my $self = {};
-
-    $uravo = new Uravo;
-
-    bless($self, $class);
-    return $self;
-}
+use parent 'Uravo::Agent::Module';
 
 sub run {
     my $self = shift || return;
-    my $server = $uravo->getServer() || return;
+    my $uravo = $self->{uravo};
+    my $server = $self->{server};
 
     my $options = $uravo->{options};
-    my $monitoringValues = $server->getMonitoringValues();
 
     my $message = '';
     unless (-f "/usr/bin/ntpstat") {

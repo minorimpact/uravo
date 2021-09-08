@@ -3,25 +3,13 @@ package Uravo::Agent::run;
 use Uravo;
 use Uravo::Util;
 
-my $uravo;
-
-sub new {
-    my $class = shift || return;
-
-    my $self = {};
-
-    $uravo = new Uravo;
-
-    bless($self, $class);
-    return $self;
-}
+use parent 'Uravo::Agent::Module';
 
 sub run {
     my $self = shift || return;
-    my $server = $uravo->getServer() || return;
+    my $uravo = $self->{uravo};
 
     my $options = $uravo->{options};
-    my $monitoringValues = $server->getMonitoringValues();
 
     my $run_dir = $uravo->{config}{run_dir} || '/opt/uravo/run';
     my $runtime = (stat("$run_dir/crond.running"))[9];
@@ -38,7 +26,7 @@ sub run {
         $Summary = "crond last run " . localtime($runtime);
     }
 
-    $server->alert({AlertGroup=>'run_crond', Summary=>$Summary, Severity=>$Severity, Recurring=>1}) unless ($options->{dryrun});
+    $self->{server}->alert({AlertGroup=>'run_crond', Summary=>$Summary, Severity=>$Severity, Recurring=>1}) unless ($options->{dryrun});
 }  
 
 1;

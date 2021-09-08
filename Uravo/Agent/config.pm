@@ -79,7 +79,7 @@ sub run {
                     if ($log_data =~/^Reference time set to (.*)$/m) {
                         $start_date = UnixDate(ParseDate($1), "%s")
                     }
-                    my $still_running = ($start_date && (($now - $start_date) < ($monitoringValues->{'config_runtime'}{yellow} * 60)))?1:0;
+                    my $still_running = ($start_date && (($now - $start_date) < ($monitoringValues->{'config_runtime'}{'config_runtime'}{yellow} * 60)))?1:0;
 
                     if ($log_data =~ /(Package install command was not successful)/ && !$still_running) {
                         $Severity = 'red';
@@ -87,29 +87,20 @@ sub run {
                     } elsif (!$still_running) {
                         $Summary = "Package install succeeded or was not attempted.";
                     } else {
-                        $Summary = "Still within $monitoringValues->{'config_runtime'}{yellow} minutes of cfengine's start time of " . localtime($start_date);
+                        $Summary = "Still within $monitoringValues->{'config_runtime'}{'config_runtime'}{yellow} minutes of cfengine's start time of " . localtime($start_date);
                     }
                     $server->alert({AlertGroup=>'config_install', Severity=>$Severity, Summary=>$Summary, Recurring=>1}) unless ($options->{dryrun});
 
                     $Severity = 'green';
-                    my $promisesnotkept_yellow = $monitoringValues->{'config_promises'}{'yellow'};
-                    my $promisesnotkept_red = $monitoringValues->{'config_promises'}{'red'};
                     if ($log_data =~/Promises not (kept|repaired)\s+(\d+)%/ && !$still_running) {
                         my $promisesnotkept = $2;
-                        if ($promisesnotkept >= $promisesnotkept_red) {
-                            $Severity = 'red';
-                            $Summary = "Promises not kept: $promisesnotkept%";
-                        } elsif ($promisesnotkept >= $promisesnotkept_yellow) {
-                            $Severity = 'yellow';
-                            $Summary = "Promises not kept: $promisesnotkept%";
-                        } else {
-                            $Summary = "Promises not kept: $promisesnotkept%";
-                        }
+                        $Severity = $self->getSeverity('config_promises', undef, $promisesnotkept);
+                        $Summary = "Promises not kept: $promisesnotkept%";
                     } elsif (!$still_running) {
                         $Severity = 'red';
                         $Summary = "Promises not kept value not present in $log_file."
                     } else {
-                        $Summary = "Still within $monitoringValues->{'config_runtime'}{yellow} minutes of cfengine's start time of " . localtime($start_date);
+                        $Summary = "Still within $monitoringValues->{'config_runtime'}{'config_runtime'}{yellow} minutes of cfengine's start time of " . localtime($start_date);
                     }
                     $server->alert({AlertGroup=>'config_promises', Severity=>$Severity, Summary=>$Summary, Recurring=>1}) unless ($options->{dryrun});
                 } elsif ($type eq 'puppet') {

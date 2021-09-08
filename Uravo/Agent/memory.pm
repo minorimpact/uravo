@@ -4,27 +4,15 @@ use strict;
 
 use Uravo;
 use Uravo::Util;
+use parent 'Uravo::Agent::Module';
 
-my $uravo;
-
-sub new {
-    my $class = shift || return;
-
-    my $self = {};
-
-    $uravo = new Uravo;
-
-    bless($self, $class);
-    return $self;
-}
 
 sub run {
-    my $self = shift || return;
+    my $self = shift || die;
+    my $uravo = $self->{uravo};
 
     my $options = $uravo->{options};
-    my $server = $uravo->getServer() || die("Can't create server object.");
-    my $monitoringValues = $server->getMonitoringValues();
-  
+    my $server = $self->{server};
 
     my $free = join("\n", Uravo::Util::do_cmd('free'));
 
@@ -78,13 +66,7 @@ sub run {
         }
     }
 
-    my $Severity = 'green';
-    if (!$monitoringValues->{'memory'}{'swap'}{'disabled'} && $swap_percent > $monitoringValues->{'memory'}{'swap'}{'red'}) {
-        $Severity = 'red';
-    } elsif (!$monitoringValues->{'memory'}{'swap'}{'disabled'} && $swap_percent > $monitoringValues->{'memory'}{'swap'}{'yellow'}) {
-        $Severity = 'yellow';
-    }
-
+    my $Severity = $self->getSeverity('memory', 'swap', $swap_percent);
     my $Summary = sprintf("Swap %.2f%% - total:%s used:%s free:%s", $swap_percent, $swap_total, $swap_used, $swap_free);
     $server->alert({Summary=>$Summary, Severity=>$Severity, AlertGroup=>'memory', AlertKey=>'swap', Recurring=>1}) unless ($options->{dryrun});
 }

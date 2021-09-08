@@ -3,25 +3,14 @@ package Uravo::Agent::squid;
 use Uravo;
 use Uravo::Util;
 
-my $uravo;
-
-sub new {
-    my $class = shift || return;
-
-    my $self = {};
-
-    $uravo = new Uravo;
-
-    bless($self, $class);
-    return $self;
-}
+use parent 'Uravo::Agent::Module';
 
 sub run {
     my $self = shift || return;
+    my $uravo = $self->{uravo};
     my $server = $uravo->getServer() || return;
 
     my $options = $uravo->{options};
-    my $monitoringValues = $server->getMonitoringValues();
 
     my $Severity;
     my $Summary;
@@ -94,21 +83,11 @@ sub run {
     $info{'HIT'} .= sprintf("Average seconds per request:%0.3f ", $seconds_per_request);
     $info{'MISS'} .= sprintf("Average seconds per request:%0.3f ", $seconds_per_request);
 
-    $Severity = 'green';
-    if ($hitrate < $monitoringValues->{'squid_itrate'}{'red'} && !$monitoringValues->{'squid_hitrate'}{disabled}) {
-        $Severity = 'red';
-    } elsif ($hitrate < $monitoringValues->{'squid_hitrate'}{'yellow'} && !$monitoringValues->{'squid_hitrate'}{disabled}) {
-        $Severity = 'yellow';
-    }
+    $severity = $self->getSeverity('squid_hitrate', undef, $hitrate);
     $Summary = sprintf("Total hit rate is %.2f%%", $hitrate);
     $server->alert({AlertGroup=>'squid_hitrate', Summary=>$Summary, Severity=>$Severity, AdditionalInfo=>$info{'HIT'}, Recurring=>1}) unless ($options->{dryrun});
 
-    $Severity = 'green';
-    if ($missrate > $monitoringValues->{'squid_missrate'}{'red'} && !$monitoringValues->{'squid_missrate'}{disabled}) {
-        $Severity = 'red';
-    } elsif ($missrate > $monitoringValues->{'squid_missrate'}{'yellow'} && !$monitoringValues->{'squid_missrate'}{disabled}) {
-        $Severity = 'yellow';
-    }
+    $severity = $self->getSeverity('squid_missrate', undef, $missrate);
     $Summary = sprintf "Total miss rate is %.2f%%", $missrate);
     $server->alert({AlertGroup=>'squid_missrate', Summary=>$Summary, Severity=>$Severity, AdditionalInfo=>$info{'MISS'}, Recurring=>1}) unless ($options->{dryrun});
 
@@ -116,12 +95,7 @@ sub run {
     my @points = split(/\b\s+/,$top);
     my $cpu_pct = $points[8];
 
-    $Severity = 'green';
-    if (!$monitoringValues->{'squid_cpu'}{'disabled'} && $cpu_pct > $monitoringValues->{'squid_cpu'}{'red'}) {
-        $Severity = 'red';
-    } elsif (!$monitoringValues->{'squid_cpu'}{'disabled'} && $cpu_pct > $monitoringValues->{'squid_cpu'}{'yellow'}) {
-        $Severity = 'yellow';
-    }
+    $severity = $self->getSeverity('squid_cpu', undef, $cpu_pct);
     $Summary = "CPU processs percent: $cpu_pct\%";
     $server->alert({AlertGroup=>'squid_cpu', Summary=>$Summary, Severity=>$Severity, Recurring=>1}) unless ($options->{dryrun});
 

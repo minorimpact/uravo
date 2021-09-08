@@ -6,48 +6,24 @@ use Data::Dumper;
 use Uravo;
 use Uravo::Util;
 
-my $uravo;
-
-sub new {
-    my $class = shift || return;
-
-    my $self = {};
-
-    $uravo = new Uravo;
-
-    bless($self, $class);
-    return $self;
-}
+use parent 'Uravo::Agent::Module';
 
 sub run {
     my $self = shift || return;
-    my $server = $uravo->getServer() || return;
+    my $uravo = $self->{uravo};
 
     my $options = $uravo->{options} || {};
-    my $server_id = $server->id();
-    my $monitoringValues = $server->getMonitoringValues();
-    my $Severity;
 
     my $ps = Uravo::Util::ps();
     return unless ($ps && scalar keys %$ps);
     my $proc_count = scalar keys %$ps;
+    $self->{server}->graph('procs_total',$proc_count);
 
-    # Check maximum process count.
-    my $panic = $monitoringValues->{procs_total}{red};
-    my $warn = $monitoringValues->{procs_total}{yellow};
-
-    $Severity = 'green';
-    my $proc_count = scalar keys %$ps;
-    $server->graph('procs_total',$proc_count);
-    if ($proc_count >= $panic && !$monitoringValues->{procs_total}{disabled}) {
-        $Severity = 'red';
-    } elsif ($proc_count >= $warn && !$monitoringValues->{procs_total}{disabled}) {
-        $Severity = 'yellow';
-    }
+    my $Severity = $self->getSeverity('procs_total', undef, $proc_count);
     my $Summary = "Found $proc_count processes";
-    $server->alert({Summary=>$Summary, AlertGroup=>'procs_total', Severity=>$Severity});
+    $self->{server}->alert({Summary=>$Summary, AlertGroup=>'procs_total', Severity=>$Severity});
 
-    my $procs = $server->getProcs();
+    my $procs = $self->{server}->getProcs();
     return unless (scalar keys %$procs);
 
     my %most_common = ();
@@ -84,7 +60,7 @@ sub run {
                 $Severity = 'red';
             }
         }
-        $server->alert({Summary=>$Summary, AlertGroup=>'proc_count', AlertKey=>$proc, Severity=>$Severity});
+        $self->{server}->alert({Summary=>$Summary, AlertGroup=>'proc_count', AlertKey=>$proc, Severity=>$Severity});
     }
 }
 

@@ -4,45 +4,28 @@ use Disk::SMART;
 use Uravo;
 use Uravo::Util;
 
-my $uravo;
-
-sub new {
-    my $self = {};
-
-    my $class = shift || return;
-
-    $uravo = new Uravo;
-
-    bless($self, $class);
-    return $self;
-}
+use parent 'Uravo::Agent::Module'; #our @ISA = (Uravo::Agent::Module);
 
 sub run {
     my $self = shift || return;
-    my $server = $uravo->getServer() || return;
 
-    my $options = $uravo->{options};
-    my $monitoringValues = $server->getMonitoringValues();
+    my $server = $self->{server};
+    my $options = $self->{options};
 
     my $DFCMD = '/bin/df -lk';
     my $INODE = '/bin/df -li';
     my $DFUSE = "^/dev";
-    my $DFEXCLUDE = "(cdrom|netapp|usb|loop)";
+    my $DFEXCLUDE = "(cdrom|netapp|usb|loop|mmcblk0p1)";
     my $RATEEXCLUDE = "(/mnt/db_snapshot)";
 
     my $full_df = "# $DFCMD\n";
 
     # get disk space output
-    my @df = ();
+    my $df = {};
     open(DF, "$DFCMD |");
     while (my $line = <DF>) {
         $full_df .= $line;
         chomp($line);
-        # handle this case:
-        # [root@de30-203 (11:09:57) ~]# df -k /var/lib/mysql
-        # Filesystem           1K-blocks      Used Available Use% Mounted on
-        # /dev/mapper/db-db_data
-        #                      123854820  32491340  85072024  28% /var/lib/mysql
         if (split(/\s+/, $line) == 1) {
             my $line2 = <DF>;
             $line .= $line2;
@@ -57,7 +40,7 @@ sub run {
     close(DF);
 
     # now, inodes
-    my @inode = ();
+    my $inode = {};
     my $full_inode = "# $INODE\n";
     open(INODES, "$INODE |");
     while (my $line = <INODES>) {
@@ -71,7 +54,8 @@ sub run {
         chomp($line);
         next if ($line =~ /$DFEXCLUDE/);
         next unless ($line =~ /$DFUSE/);
-        push @inode, $line;
+        my $i = readDF($line);
+        $inode->{$i->{dev}} = $i;
     }
     close(INODES);
 
@@ -81,12 +65,7 @@ sub run {
     my $message = "";
 
     foreach my $disk (values %$df) {
-        my $Severity = "green";
-        if (!$monitoringValues->{'disk_size'}{'disabled'} && $disk->{percent} >= $monitoringValues->{'disk_size'}{'red'}) {
-            $Severity = "red";
-        } elsif (!$monitoringValues->{'disk_size'}{'disabled'} && $disk->{percent} >= $monitoringValues->{'disk_size'}{'yellow'}) {
-            $Severity = "yellow";
-        }
+        my $Severity = $self->getSeverity('disk_size', $disk->{diskname}, $disk->{percent});
         $Summary = "$disk->{diskname} ($disk->{percent}% full)";
         $server->graph("disk_size.$disk->{diskname}", $disk->{percent});
         $server->alert({Severity=>$Severity, AlertGroup=>'disk_size', AlertKey=>$disk->{diskname}, Summary=>$Summary, Recurring=>1}) unless ($options->{dryrun});
@@ -98,13 +77,8 @@ sub run {
                 my $rate = ($used - $last_used)/$seconds;
                 my $timetofill = ($rate > 0) ? ($available / $rate) / 60:0;
 
-                my $Severity = "green";
                 if ($timetofill) {
-                    if (!$monitoringValues->{'disk_fill'}{'disabled'} && $timetofill < $monitoringValues->{'disk'}{'rate'}{'red'}) {
-                        $Severity = "red";
-                    } elsif (!$monitoringValues->{'disk_fill'}{'disabled'} && $timetofill < $monitoringValues->{'disk'}{'rate'}{'yellow'}) {
-                        $Severity = "yellow";
-                    }
+                    my $Severity = $self->getSeverity('disk_fill', $disk->{diskname}, $timetofill);
                     $Summary = sprintf("$disk->{diskname} will be full in approximately %s", days($timetofill));
                     $server->alert({Recurring=>1, Severity=>$Severity, AlertGroup=>"disk_fill", AlertKey=>$disk->{diskname}, Summary=>$Summary }) unless ($options->{dryrun});
                 } else {
@@ -119,13 +93,8 @@ sub run {
         }
     }
 
-    foreach my $disk (values %$df) {
-        my $Severity = "green";
-        if ($disk->{percent} >= $monitoringValues->{inode_size}{red} && !$monitoringValues->{inode_size}{disabled}) {
-            $Severity = "red";
-        } elsif ($disk->{percent} >=  $monitoringValues->{inode_size}{yellow} && !$monitoringValues->{inode_size}{disabled}) {
-            $Severity = "yellow";
-        }
+    foreach my $disk (values %$inode) {
+        my $Severity = $self->getSeverity('inode_size', $disk->{diskname}, $disk->{percent});
         $Summary = "$disk->{diskname} inodes used: $disk->{percent}%";
         $server->graph("inode_size", $disk->{percent});
         $server->alert({Recurring=>1, Severity=>$Severity, AlertGroup=>"inode_size", AlertKey=>$disk->{diskname}, Summary=>$Summary}) unless ($options->{dryrun});
@@ -137,13 +106,8 @@ sub run {
                 my $rate = ($disk->{current} - $last_inode)/$seconds;
                 my $timetofill = ($rate > 0) ? ($available / $rate) / 60:0;
 
-                my $Severity = 'green';
                 if ($timetofill) {
-                    if ($timetofill <  $monitoringValues->{inode_fill}{red} && !$monitoringValues->{inode_fill}{disabled}) {
-                        $Severity = "red";
-                    } elsif ($timetofill < $monitoringValues->{inode_fill}{yellow} && !$monitoringValues->{inode_fill}{disabled}) {
-                        $Severity = "yellow";
-                    }
+                    my $Severity = $self->getSeverityLT('inode_fill', $disk->{diskname}, $timetofill);
                     $Summary = sprintf("$disk->{diskname} will run out of inodes in approximately %s", days($timetofill));
                     $server->alert({Recurring=>1, Severity=>$Severity, AlertGroup=>"inode_fill", AlertKey=>$disk->{diskname}, Summary=>$Summary}) unless ($options->{dryrun});
                 } else {
@@ -183,21 +147,16 @@ sub run {
             $server->alert({Recurring=>1, Severity=>$Severity, AlertGroup=>"disk_health", AlertKey=>$dev, Summary=>$Summary}) unless ($options->{dryrun});
 
             # temperature check
-            my $Severity = "green";
             my ($temp_c, $temp_f) = $smart->get_disk_temp($dev);
-            if (int($temp_f) >=  int($monitoringValues->{disk_temp}{red}) && !$monitoringValues->{disk_temp}{disabled}) {
-                $Severity = "red";
-            } elsif (($temp_f) >= ($monitoringValues->{disk_temp}{yellow}) && !$monitoringValues->{disk_temp}{disabled}) {
-                $Severity = "yellow";
-            }
+            my $Severity = $self->getSeverity('disk_temp', $dev, $temp_f);
             $Summary = sprintf("$dev temperature: %d", $temp_f);
             $server->alert({Recurring=>1, Severity=>$Severity, AlertGroup=>"disk_temp", AlertKey=>$dev, Summary=>$Summary}) unless ($options->{dryrun});
             $done_dev->{$dev} = 1;
         }
     }
 
-    if ($uravo->{config}{disk_write}) {
-        my @partitions = split(/,/, $uravo->{config}{disk_write});
+    if ($self->{uravo}->{config}{disk_write}) {
+        my @partitions = split(/,/, $self->{uravo}->{config}{disk_write});
         my $test_data = {};
         foreach my $part (@partitions) {
             $part =~s/\/$//;

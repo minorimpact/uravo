@@ -19,7 +19,7 @@ sub new {
     my $params      = shift;
     my $self	    = bless({}, $package);
 
-    $uravo = new Uravo;
+    $uravo ||= new Uravo;
     $uravo->log("Uravo::Serverroles::Server::new()", 5);
     my $db_data = $uravo->getCache("server:$server_id");
     unless ($db_data) {
@@ -112,12 +112,15 @@ sub getInterface {
 sub getProcs {
     $uravo->log("Uravo::Serverroles::Server::getProcs()", 5);
     my $self    = shift || return;
+    $uravo ||= new Uravo;
 
     my $proc_list;
 
     foreach my $type_id ( @{$self->{type_ids}}) {
-       my $pl   = ($uravo->getType($type_id))->getProcs();
-       foreach my $proc (keys %$pl) {
+        my $type = $uravo->getType($type_id);
+        die "invalid type:$type_id\n" unless ($type);
+        my $pl   = $type->getProcs();
+        foreach my $proc (keys %$pl) {
            if ($proc_list->{$proc}) {
                $proc_list->{$proc}  = $pl->{$proc} if ($proc_list->{$proc} lt $pl->{$proc});
            } else {
@@ -489,19 +492,24 @@ sub update {
     if ($field eq 'type_id' || $field eq 'type') {
         #if ($value ne $self->type_id()) {
             #$uravo->changelog({object_type=>$self->{object_type}, object_id=>$self->id(),field_name=>'type_id',old_value=>$self->type_id(), new_value=>$value},$changelog);
-            $uravo->{db}->do("DELETE FROM server_type WHERE server_id=?", undef, ($self->id())) || die($uravo->{db}->errstr);
+            my @types = ();
             if (ref($value) eq "ARRAY") {
                 foreach my $t (@$value) {
                     next if (!$t || $t eq 'none');
-                    $uravo->{db}->do("INSERT INTO server_type (server_id, type_id, create_date) values (?, ?, NOW())", undef, ($self->id(), $t)) || die ($uravo->{db}->errstr);
+                    push(@types, $t);
                 }
-                $self->{type_ids} = $value;
             } else {
-                my @types = split(',', $value);
-                for my $type (@types) {
-                    $uravo->{db}->do("INSERT INTO server_type (server_id, type_id, create_date) values (?, ?, NOW())", undef, ($self->id(), $type)) || die ($uravo->{db}->errstr);
-                }
+                @types = split(',', $value);
             }
+            for my $type_id (@types) {
+                die "can't set server to non-existent type '$type_id'" if (!$uravo->getType($type_id));
+            }
+
+            $uravo->{db}->do("DELETE FROM server_type WHERE server_id=?", undef, ($self->id())) || die ($uravo->{db}->errstr);
+            for my $type_id (@types) {
+                $uravo->{db}->do("INSERT INTO server_type (server_id, type_id, create_date) values (?, ?, NOW())", undef, ($self->id(), $type_id)) || die ($uravo->{db}->errstr);
+            }
+            $self->{type_ids} = \@types;
         #}
         return $changelog;
     }
@@ -643,15 +651,10 @@ sub getMonitoringValues {
     my $default_sql = "select AlertGroup, AlertKey, yellow, red, disabled from monitoring_default_values";
     $results = $uravo->{db}->selectall_arrayref($default_sql, {Slice=>{}});
     foreach my $data (@$results) {
-        if ($data->{AlertKey}) {
-            $monitoringValues->{$data->{'AlertGroup'}}{$data->{'AlertKey'}}{'yellow'} = $data->{'yellow'};
-            $monitoringValues->{$data->{'AlertGroup'}}{$data->{'AlertKey'}}{'red'} = $data->{'red'};
-            $monitoringValues->{$data->{'AlertGroup'}}{$data->{'AlertKey'}}{'disabled'} = $data->{'disabled'};
-        } else {
-            $monitoringValues->{$data->{'AlertGroup'}}{'yellow'} = $data->{'yellow'};
-            $monitoringValues->{$data->{'AlertGroup'}}{'red'} = $data->{'red'};
-            $monitoringValues->{$data->{'AlertGroup'}}{'disabled'} = $data->{'disabled'};
-        }
+        $data->{AlertKey} ||= $data->{'AlertGroup'};
+        $monitoringValues->{$data->{'AlertGroup'}}{$data->{'AlertKey'}}{'yellow'} = $data->{'yellow'};
+        $monitoringValues->{$data->{'AlertGroup'}}{$data->{'AlertKey'}}{'red'} = $data->{'red'};
+        $monitoringValues->{$data->{'AlertGroup'}}{$data->{'AlertKey'}}{'disabled'} = $data->{'disabled'};
     }
 
     my $cluster_id = $self->cluster_id();
@@ -661,30 +664,20 @@ sub getMonitoringValues {
         if (($cluster_id && $type_id) || $server_id) {
             $clustertype_results = $uravo->{db}->selectall_arrayref("$sql WHERE cluster_id = ? AND type_id = ? AND server_id IS NULL", {Slice=>{}}, ($cluster_id, $type_id));
             foreach my $data (@$clustertype_results) {
-                if ($data->{AlertKey}) {
-                    $monitoringValues->{$data->{'AlertGroup'}}{$data->{'AlertKey'}}{'yellow'} = $data->{'yellow'};
-                    $monitoringValues->{$data->{'AlertGroup'}}{$data->{'AlertKey'}}{'red'} = $data->{'red'};
-                    $monitoringValues->{$data->{'AlertGroup'}}{$data->{'AlertKey'}}{'disabled'} = $data->{'disabled'};
-                } else {
-                    $monitoringValues->{$data->{'AlertGroup'}}{'yellow'} = $data->{'yellow'};
-                    $monitoringValues->{$data->{'AlertGroup'}}{'red'} = $data->{'red'};
-                    $monitoringValues->{$data->{'AlertGroup'}}{'disabled'} = $data->{'disabled'};
-                }
+                $data->{AlertKey} ||= $data->{'AlertGroup'};
+                $monitoringValues->{$data->{'AlertGroup'}}{$data->{'AlertKey'}}{'yellow'} = $data->{'yellow'};
+                $monitoringValues->{$data->{'AlertGroup'}}{$data->{'AlertKey'}}{'red'} = $data->{'red'};
+                $monitoringValues->{$data->{'AlertGroup'}}{$data->{'AlertKey'}}{'disabled'} = $data->{'disabled'};
             }
 
         }
     }
     $server_results = $uravo->{db}->selectall_arrayref("$sql WHERE server_id = ?", {Slice=>{}}, ($server_id));
     foreach my $data (@$server_results) {
-        if ($data->{AlertKey}) {
-            $monitoringValues->{$data->{'AlertGroup'}}{$data->{'AlertKey'}}{'yellow'} = $data->{'yellow'};
-            $monitoringValues->{$data->{'AlertGroup'}}{$data->{'AlertKey'}}{'red'} = $data->{'red'};
-            $monitoringValues->{$data->{'AlertGroup'}}{$data->{'AlertKey'}}{'disabled'} = $data->{'disabled'};
-        } else {
-            $monitoringValues->{$data->{'AlertGroup'}}{'yellow'} = $data->{'yellow'};
-            $monitoringValues->{$data->{'AlertGroup'}}{'red'} = $data->{'red'};
-            $monitoringValues->{$data->{'AlertGroup'}}{'disabled'} = $data->{'disabled'};
-        }
+        $data->{AlertKey} ||= $data->{'AlertGroup'};
+        $monitoringValues->{$data->{'AlertGroup'}}{$data->{'AlertKey'}}{'yellow'} = $data->{'yellow'};
+        $monitoringValues->{$data->{'AlertGroup'}}{$data->{'AlertKey'}}{'red'} = $data->{'red'};
+        $monitoringValues->{$data->{'AlertGroup'}}{$data->{'AlertKey'}}{'disabled'} = $data->{'disabled'};
     }
 
     $uravo->setCache("monitoringValues:$server_id", $monitoringValues);

@@ -2,26 +2,14 @@ package Uravo::Agent::ifconfig;
 
 use Uravo;
 use Uravo::Util;
-
-my $uravo;
-
-sub new {
-    my $class = shift || return;
-
-    my $self = {};
-
-    $uravo = new Uravo;
-
-    bless($self, $class);
-    return $self;
-}
+use parent 'Uravo::Agent::Module';
 
 sub run {
     my $self = shift || return;
+    my $uravo = $self->{uravo};
     my $server = $uravo->getServer() || return;
 
     my $options = $uravo->{options};
-    my $monitoringValues = $server->getMonitoringValues();
 
     my $IFCONFIG = "/sbin/ifconfig";
 
@@ -55,37 +43,16 @@ sub run {
             my $dps = (($interface{$i}{$RTX}{'dropped'} - $last_dropped)/300);
             my $cps = (($interface{$i}{$RTX}{'carrier'} - $last_carrier)/300);
 
-            my $Severity = 'green';
-            if (!$monitoringValues->{'ifconfig_overruns'}{'disabled'}) {
-                if ($ops > $monitoringValues->{'ifconfig_overruns'}{'red'}) {
-                    $Severity = 'red'; 
-                } elsif ($ops > $monitoringValues->{'ifconfig_overruns'}{'yellow'}) {
-                    $Severity = "yellow";
-                }
-            }
+            my $Severity = $self->getSeverity('ifconfig_overruns', undef, $ops);
             $Summary = sprintf("%s Overruns:%d (%.2f/s)", "$iname/$RTX", $interface{$i}{$RTX}{'overruns'}, $ops);
             $server->alert({Summary=>$Summary, Severity=>$Severity, AlertGroup=>'ifconfig_overruns', AlertKey=>"$i-$RTX", Recurring=>1}) unless ($options->{dryrun});
 
-            $Severity = 'green';
-            if (!$monitoringValues->{'ifconfig_dropped'}{'disabled'}) {
-                if ($ops > $monitoringValues->{'ifconfig_dropped'}{'red'}) {
-                    $Severity = 'red'; 
-                } elsif ($ops > $monitoringValues->{'ifconfig_dropped'}{'yellow'}) {
-                    $Severity = "yellow";
-                }
-            }
-            $Summary = sprintf("%s dropped:%d (%.2f/s)", "$iname/$RTX", $interface{$i}{$RTX}{'dropped'}, $ops);
+            $Severity = $self->getSeverity('ifconfig_dropped', undef, $dps);
+            $Summary = sprintf("%s dropped:%d (%.2f/s)", "$iname/$RTX", $interface{$i}{$RTX}{'dropped'}, $dps);
             $server->alert({Summary=>$Summary, Severity=>$Severity, AlertGroup=>'ifconfig_dropped', AlertKey=>"$i-$RTX", Recurring=>1}) unless ($options->{dryrun});
 
-            $Severity = 'green';
-            if (!$monitoringValues->{'ifconfig_carrier'}{'disabled'}) {
-                if ($ops > $monitoringValues->{'ifconfig_carrier'}{'red'}) {
-                    $Severity = 'red'; 
-                } elsif ($ops > $monitoringValues->{'ifconfig_carrier'}{'yellow'}) {
-                    $Severity = "yellow";
-                }
-            }
-            $Summary = sprintf("%s carrier:%d (%.2f/s)", "$iname/$RTX", $interface{$i}{$RTX}{'carrier'}, $ops);
+            $Severity = $self->getSeverity('ifconfig_carrier', undef, $cps);
+            $Summary = sprintf("%s carrier:%d (%.2f/s)", "$iname/$RTX", $interface{$i}{$RTX}{'carrier'}, $cps);
             $server->alert({Summary=>$Summary, Severity=>$Severity, AlertGroup=>'ifconfig_carrier', AlertKey=>"$i-$RTX", Recurring=>1}) unless ($options->{dryrun});
 
             $server->setLast('ifconfig', "$i-$RTX-overruns", $interface{$i}{$RTX}{'overruns'}) if (! $options->{noupdate});
