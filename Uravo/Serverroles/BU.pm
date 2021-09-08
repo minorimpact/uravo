@@ -10,20 +10,29 @@ my $uravo;
 sub new {
     my $self	    = {};
     my $package	    = shift || return;
-    my $bu_id       = shift || return;
-
-    $self->{bu_id}  = $bu_id;
+    my $id          = shift;
 
     $uravo ||= new Uravo;
-    my $bu_data;
-    $bu_data = $uravo->{db}->selectrow_hashref("SELECT * FROM bu WHERE bu_id=?", undef, ( $bu_id )) || return;
 
+    if (!defined($id)) {
+        my $data = $uravo->{db}->selectrow_hashref("SELECT * FROM bu WHERE `default`=1") || return;
+        $id = $data->{bu_id};
+    }
+
+    if (ref($id) eq "HASH") {
+        my $params = $id;
+        $uravo->{db}->do("INSERT INTO bu (bu_id, `default`, create_date, mod_date) VALUES (?, ?, NOW(), NOW())", undef, ($params->{bu_id}, $params->{default}||0)) || die;
+        $id = $params->{bu_id};
+    }
+
+    my $bu_data = $uravo->{db}->selectrow_hashref("SELECT * FROM bu WHERE bu_id=?", undef, ( $id )) || return;
+    $self->{bu_id}  = $id;
     foreach my $key (keys %{$bu_data}) {
         $self->{bu_fields}  .= "$key ";
         $self->{$key} = $bu_data->{$key};
     }
 
-    $self->{object_type} =  'bu';
+    $self->{object_type} = 'bu';
     bless $self;
     return $self;
 }
@@ -101,8 +110,11 @@ sub update {
     if ($old_value ne $value) {
         $uravo->changelog({object_type=>$self->{object_type}, object_id=>$self->id(), field_name=>$field, old_value=>$old_value, new_value=>$value},$changelog);
     }
+    if ($field eq "default" and $value == 1) {
+        $uravo->{db}->do("UPDATE bu SET `$field`=0");
+    }
 
-    $uravo->{db}->do("UPDATE bu SET $field=? WHERE bu_id=?", undef, ( $value, $self->id() )) || die($uravo->{db}->errstr);
+    $uravo->{db}->do("UPDATE bu SET `$field`=? WHERE bu_id=?", undef, ( $value, $self->id() )) || die($uravo->{db}->errstr);
     $self->{$field} = $value;
     return $changelog;
 }
@@ -182,13 +194,10 @@ sub data {
     return $data;
 }
 
-
-
 # Misc info functions.
 sub id		{ my ($self) = @_; return $self->{bu_id}; }
 sub name	{ my ($self) = @_; return $self->{name} || $self->id(); }
 sub type    { my ($self) = @_; return $self->{object_type}; }
 sub get     { my ($self, $name) = @_; return $self->{$name}; }
-
 
 1;

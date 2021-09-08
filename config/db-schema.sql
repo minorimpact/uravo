@@ -139,6 +139,7 @@ CREATE TABLE `bu` (
   `name` varchar(50) NOT NULL,
   `contact` varchar(50) DEFAULT NULL,
   `comments` text,
+  `default` int NOT NULL DEFAULT 0,
   `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `create_date` datetime NOT NULL,
   PRIMARY KEY (`bu_id`)
@@ -690,6 +691,7 @@ CREATE TABLE `silo` (
   `silo_id` varchar(20) NOT NULL,
   `comments` text,
   `bu_id` varchar(20) NOT NULL,
+  `default` int NOT NULL DEFAULT 0,
   `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `create_date` datetime NOT NULL,
   PRIMARY KEY (`silo_id`)

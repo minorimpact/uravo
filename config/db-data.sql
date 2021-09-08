@@ -3,7 +3,7 @@ USE uravo;
 GRANT ALL ON uravo.* to 'uravo'@'%' IDENTIFIED BY 'uravo';
 GRANT ALL ON uravo.* to 'uravo'@'localhost' IDENTIFIED BY 'uravo';
 
-INSERT INTO `bu` (bu_id, name, contact, comments, create_date, mod_date) VALUES ('unknown','unknown','unknown','', NOW(), NOW());
+INSERT INTO `bu` (bu_id, name, contact, comments, `default`, create_date, mod_date) VALUES ('unknown','unknown','unknown','', 1, NOW(), NOW());
 
 INSERT INTO `cage` (`cage_id`, `prefix`, `city`, `create_date`, `mod_date`) VALUES ('unknown', '', '', NOW(), NOW());
 
@@ -76,7 +76,7 @@ INSERT INTO `settings` (`name`, `value`, `mod_date`) VALUES ('email_interval','3
 INSERT INTO `settings` (`name`, `value`, `mod_date`) VALUES ('tsunami_level','100',NOW());
 INSERT INTO `settings` (`name`, `value`, `mod_date`) VALUES ('history_to_keep','14',NOW());
 
-INSERT INTO `silo` (`silo_id`, `comments`, `bu_id`, `mod_date`, `create_date`) VALUES ('unknown','','unknown',NOW(),NOW());
+INSERT INTO `silo` (`silo_id`, `comments`, `bu_id`, `default`, `mod_date`, `create_date`) VALUES ('unknown','','unknown',1,NOW(),NOW());
 
 INSERT INTO `type` (`type_id`, `comments`, `auto_id_type`, `auto_id_source`, `auto_id_text`, `community`, `create_date`, `mod_date`) VALUES ('pylon','',NULL,NULL,NULL,NULL,NOW(),NOW());
 INSERT INTO `type` (`type_id`, `comments`, `auto_id_type`, `auto_id_source`, `auto_id_text`, `community`, `create_date`, `mod_date`) VALUES ('linux','','file','/etc/redhat-release','CentOS',NULL,NOW(),NOW());

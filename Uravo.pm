@@ -93,32 +93,52 @@ my $COLOR   = { default=> { page=>'FFFFFF',
                         } 
                };
 
-sub updateThresholds {
+sub deleteThreshold {
     my $self = shift || return;
     my $params = shift || return;
 
-        my $AlertGroup = $params->{AlertGroup} || return;
-        my $AlertKey = $params->{AlertKey} || "";
-        my $red = $params->{red} || return;
-        my $yellow = $params->{yellow};
-        my $disabled = MinorImpact::isTrue($params->{disbled}) ? 1 : 0;
-        my $default = (defined($params->{default}) and MinorImpact::isTrue($params->{disbled})) ? 1 : 0;
-        my $server_id = $params->{server_id} || "";
-        my $cluster_id = $params->{cluster_id} || "";
-        my $type_id = $params->{cluster_id} || "";
-        $default = 1 if (($server_id == "" and $cluster_id == "" and $type_id == "" and $AlertKey == "") or (defined($params->{default}) and MinorImpact::isTrue($params->{default})));
+    my $AlertGroup = $params->{AlertGroup} || return;
+    my $AlertKey = $params->{AlertKey} || "";
+    my $server_id = $params->{server_id} || "";
+    my $cluster_id = $params->{cluster_id} || "";
+    my $type_id = $params->{type_id} || "";
+    my $default = (($server_id eq "" and $cluster_id eq "" and $type_id eq "") or (defined($params->{default}) and MinorImpact::isTrue($params->{default})))?1:0;
 
-        if ($default) {
-            my $sql = "INSERT INTO monitoring_default_values (AlertGroup, AlertKey, red, yellow, disabled, create_date) VALUES (?, ?, ?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE red=?, yellow=?, disabled=?, mod_date=NOW()";
-            my @values = ($AlertGroup, $AlertKey, $red, $yellow, $disabled, $red, $yellow, $disabled);
-            $self->{db}->do($sql, undef, @values);
-        } else {
-            my $sql = "INSERT INTO monitoring_values (AlertGroup, AlertKey, cluster_id, type_id, server_id, red, yellow, disabled, create_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE red=?, yellow=?, disabled=?, mod_date=NOW()";
-            my @values = ($AlertGroup, $AlertKey, $cluster_id, $type_id, $server_id, $red, $yellow, $disabled, $red, $yellow, $disabled);
-            $self->{db}->do($sql, undef, @values);
-        }
+    if ($default) {
+        my $sql = "DELETE FROM monitoring_default_values WHERE AlertGroup=? and AlertKey=?";
+        my @values = ($AlertGroup, $AlertKey);
+        $self->{db}->do($sql, undef, @values);
+    } else {
+        my $sql = "DELETE FROM monitoring_values WHERE AlertGroup=? and AlertKey=? AND cluster_id=? AND type_id=? AND server_id=?";
+        my @values = ($AlertGroup, $AlertKey, $cluster_id, $type_id, $server_id);
+        $self->{db}->do($sql, undef, @values);
     }
+}
 
+sub updateThreshold {
+    my $self = shift || return;
+    my $params = shift || return;
+
+    my $AlertGroup = $params->{AlertGroup} || return;
+    my $AlertKey = $params->{AlertKey} || "";
+    my $red = $params->{red} || return;
+    my $yellow = $params->{yellow};
+    my $disabled = MinorImpact::isTrue($params->{disbled}) ? 1 : 0;
+    my $server_id = $params->{server_id} || "";
+    my $cluster_id = $params->{cluster_id} || "";
+    my $type_id = $params->{type_id} || "";
+    my $default = (($server_id eq "" and $cluster_id eq "" and $type_id eq ""))?1:0;
+
+    if ($default) {
+        my $sql = "INSERT INTO monitoring_default_values (AlertGroup, AlertKey, red, yellow, disabled, create_date) VALUES (?, ?, ?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE red=?, yellow=?, disabled=?, mod_date=NOW()";
+        my @values = ($AlertGroup, $AlertKey, $red, $yellow, $disabled, $red, $yellow, $disabled);
+        $self->{db}->do($sql, undef, @values);
+    } else {
+        my $sql = "INSERT INTO monitoring_values (AlertGroup, AlertKey, cluster_id, type_id, server_id, red, yellow, disabled, create_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE red=?, yellow=?, disabled=?, mod_date=NOW()";
+        my @values = ($AlertGroup, $AlertKey, $cluster_id, $type_id, $server_id, $red, $yellow, $disabled, $red, $yellow, $disabled);
+        $self->{db}->do($sql, undef, @values);
+    }
+}
 
 sub getCages {
     my $self = shift || return;
@@ -145,7 +165,6 @@ sub getCage {
     $self->log("Uravo::getCage()", 5);
     return new Uravo::Serverroles::Cage($cage_id, $params);
 }
-
 
 sub getEvent {
     my $self = shift || return;

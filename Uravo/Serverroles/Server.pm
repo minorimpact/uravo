@@ -4,6 +4,7 @@ use strict;
 
 use Data::Dumper;
 
+use MinorImpact;
 use Uravo::Serverroles::Interface;
 use Uravo::InfluxDB;
 use Uravo::Pylon;
@@ -81,20 +82,21 @@ sub deleteInterface {
  
 sub getInterfaces {
     my $self        = shift || return;
-    my $params      = shift;
+    my $params      = shift || {};
+    my $local_params = MinorImpact::cloneHash($params);
 
-    $params->{'server'} = $self->id();
+    $local_params->{'server'} = $self->id();
     my @list        = ();
-    foreach my $interface_id (Uravo::Serverroles::Interface::_list($params)) {
-        if ($params->{'id_only'}) {
+    foreach my $interface_id (Uravo::Serverroles::Interface::_list($local_params)) {
+        if ($local_params->{'id_only'}) {
             push @list, $interface_id; 
         } else { 
             push @list, $self->getInterface($interface_id); 
         }
     }
-    if ($params->{'pre_sort'} && $params->{'id_only'}) {
+    if ($local_params->{'pre_sort'} && $local_params->{'id_only'}) {
          return sort @list;
-    } elsif ($params->{'pre_sort'}) {
+    } elsif ($local_params->{'pre_sort'}) {
          return sort { $a->id() cmp $b->id(); } @list;
     }
     return @list;
@@ -854,6 +856,32 @@ sub getModules {
     $tmp_params->{server_id} = $self->id();
 
     return $uravo->getModules($tmp_params);
+}
+
+sub info {
+    my $self = shift || return;
+   
+	my $output = "";
+    my $hostname = $self->hostname();
+    my $cluster_id = $self->cluster_id();
+    my @types = $self->getTypes({id_only=>1});
+
+    $output .= "server_id = " . $self->id() . "\n";
+    $output .= "hostname = $hostname\n";
+    $output .= "cluster_id = $cluster_id\n";
+    $output .= "silo_id = " . $self->getSilo()->id() . "\n";
+    $output .= "type_id = " . join(",", @types) . "\n";
+    #$output .= "ip = " . $self->ip() . "\n";
+    foreach my $interface ($self->getInterfaces()) {
+        $output .= "ip = " . $interface->get('ip');
+        if ($interface->isMain()) {
+            $output .= "*";
+        }
+        $output .= "\n";
+    }
+
+
+    return $output;
 }
 
 sub ip {

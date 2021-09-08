@@ -10,19 +10,30 @@ my $uravo;
 sub new {
     my $self	    = {};
     my $package	    = shift || return;
-    my $silo_id       = shift || return;
-
-    $self->{silo_id}  = $silo_id;
+    my $id          = shift || return;
 
     $uravo ||= new Uravo;
-    my $silo_data;
-    $silo_data = $uravo->{db}->selectrow_hashref("SELECT * FROM silo WHERE silo_id=?", undef, ( $silo_id ))|| return;
 
-    foreach my $key (keys %{$silo_data}) {
-        $self->{silo_fields}  .= "$key ";
-        $self->{$key} = $silo_data->{$key};
+    if (ref($id) eq "HASH") {
+		my $params = $id;
+		die "must specify silo_id" unless (defined($params->{silo_id}));
+        if (!defined($params->{bu_id})) {
+            my $bu = new Uravo::Serverroles::BU() || die "Can't get default BU";
+            $params->{bu_id} = $bu->id();
+        }
+		$uravo->{db}->do("INSERT INTO silo (silo_id, bu_id, `default`, create_date) VALUES (?, ?, ?, now())", undef, ($params->{silo_id}, $params->{bu_id}, $params->{default}||0)) || die ($uravo->{db}->errstr);
     }
+	else {
+		$self->{silo_id}  = $id;
 
+		my $silo_data;
+		$silo_data = $uravo->{db}->selectrow_hashref("SELECT * FROM silo WHERE silo_id=?", undef, ( $self->{silo_id} ))|| return;
+
+		foreach my $key (keys %{$silo_data}) {
+			$self->{silo_fields}  .= "$key ";
+			$self->{$key} = $silo_data->{$key};
+		}
+	}
     $self->{object_type} =  'silo';
     bless $self;
     return $self;
@@ -231,5 +242,20 @@ sub id		{ my ($self) = @_; return $self->{silo_id}; }
 sub name	{ my ($self) = @_; return $self->{name} || $self->id(); }
 sub type    { my ($self) = @_; return $self->{object_type}; }
 sub get     { my ($self, $name) = @_; return $self->{$name}; }
+
+# Non object functions
+sub add {
+    my $params  = shift || return;
+    my $changelog = shift;
+    $uravo ||= new Uravo;
+
+    my $silo = new Uravo::Serverroles::Silo($params) || die ("can't add new silo");
+    
+    if ($changelog) {
+        $uravo->changelog({object_type=>'silo', object_id=>$silo->id(), field_name=>'New silo', new_value=>$silo->id()},$changelog);
+    }
+
+    return $silo;
+}
 
 1;

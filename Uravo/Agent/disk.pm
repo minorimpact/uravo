@@ -206,6 +206,7 @@ sub run {
                 $server->alert({Severity=>"red", AlertGroup=>"disk_write_open", AlertKey=>$part, Summary=>"Can't open $part/disk_write for writing", AdditionalInfo=>$@}) unless ($options->{dryrun});
                 next;
             }
+            $server->alert({Severity=>"green", AlertGroup=>"disk_write_open", AlertKey=>$part, Summary=>"Opened $part/disk_write for writing"}) unless ($options->{dryrun});
             $test_data->{$part} = int(rand(10000));
             print disk_write $test_data->{$part};
             close(disk_write);
@@ -216,9 +217,10 @@ sub run {
             next if (!defined($test_data->{$part}));
             print("reading $part\n") if ($options->{verbose});
             if (!open(disk_write, '<', "$part/disk_write")) {
-                $server->alert({Severity=>$Severity, AlertGroup=>"disk_write_read", AlertKey=>$part, Summary=>"Can't open $part/disk_write for reading", AdditionalInfo=>$@}) unless ($options->{dryrun});
+                $server->alert({Severity=>"red", AlertGroup=>"disk_write_read", AlertKey=>$part, Summary=>"Can't open $part/disk_write for reading", AdditionalInfo=>$@}) unless ($options->{dryrun});
                 next;
             }
+            $server->alert({Severity=>"green", AlertGroup=>"disk_write_read", AlertKey=>$part, Summary=>"opened $part/disk_write for reading"}) unless ($options->{dryrun});
             read(disk_write, my $val, 5);
             close(disk_write);
             my $Severity = "green";
