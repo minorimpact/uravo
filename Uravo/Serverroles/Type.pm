@@ -135,36 +135,65 @@ sub update {
 
     if ($field eq 'procs') {
         my $proclist = $uravo->getProcesses();
-        my $type_process = $uravo->{db}->selectall_arrayref("SELECT process_id as proc_id, red from type_process WHERE type_id=?", {Slice=>{}}, ($self->id()));
+        my $mode = 0;
+        if (ref($value) ne "ARRAY") {
+            if ($value =~s/^\+//) {
+                $mode = 1;
+            } 
+            elsif ($value =~s/^\-//) {
+                $mode = -1;
+            } 
+            my $new_value = ();
+            foreach my $proc (split(',',$value)) {
+                my $data = {red=>'', yellow=>''};
+                if ($proc =~s/\:(\S+):(\S+)//) {
+                    $data->{yellow} = $1;
+                    $data->{red} = $2;
+                }
+                elsif ($proc =~s/\:(\S+)//) {
+                    $data->{red} = $1;
+                }
+                 else {
+                    $data->{red} = ">0";
+                }
+                next unless (defined($proclist->{$proc}));
+                $data->{proc_id} = $proc;
+            
+                push(@{$new_value}, $data);
+            }
+            $value = $new_value;
+        }
+
+        my $type_process = $uravo->{db}->selectall_arrayref("SELECT process_id as proc_id, yellow, red from type_process WHERE type_id=?", {Slice=>{}}, ($self->id()));
         # Scan the database for process to delete.
         foreach my $dbproc (@$type_process) {
-            my $done = 0;
+            my $match = 0;
             foreach my $proc ( @$value ) {
                 if ($proc->{proc_id} eq $dbproc->{proc_id}) {
-                    $done = 1;
+                    $match = 1;
                 }
             }
-            if (!$done) {
+            if ((!$match and $mode == 0) or ($match and $mode < 0)) {
                 $uravo->{db}->do("delete from type_process where type_id=? and process_id=?", undef, ($self->id(), $dbproc->{proc_id}));
-                $uravo->changelog({object_type=>$self->{object_type},object_id=>$self->id(),field_name=>'deleted process', old_value=>$proclist->{$dbproc->{proc_id}}{name}},$changelog);
+                $uravo->changelog({object_type=>$self->{object_type},object_id=>$self->id(),field_name=>'deleted process', old_value=>$dbproc->{proc_id}},$changelog);
             }
         }
 
         # Scan the databse for new processes to add.
         foreach my $proc ( @$value ) {
-            my $done = 0;
+            my $match = 0;
             foreach my $dbproc (@$type_process) {
                 if ($proc->{proc_id} eq $dbproc->{proc_id}) {
-                    $done = 1;
-                    if ($proc->{red} ne $dbproc->{red}) {
-                        $uravo->{db}->do("update type_process set red=? where type_id=? and process_id=?", undef, ($proc->{red}, $self->id(), $proc->{proc_id}));
-                        $uravo->changelog({object_type=>$self->{object_type},object_id=>$self->id(),field_name=>"updated ${\ $proclist->{$proc->{proc_id}}{name};} threshold", old_value=>$dbproc->{red},new_value=>$proc->{red}},$changelog);
+                    $match = 1;
+                    if ($proc->{red} ne $dbproc->{red} or $proc->{yellow} ne $dbproc->{yellow}) {
+                        $uravo->{db}->do("update type_process set yellow=?, red=? where type_id=? and process_id=?", undef, ($proc->{yellow}, $proc->{red}, $self->id(), $proc->{proc_id}));
+                        $uravo->changelog({object_type=>$self->{object_type},object_id=>$self->id(),field_name=>"updated ${\ $proc->{proc_id};} threshold", old_value=>$dbproc->{red},new_value=>$proc->{red}},$changelog);
                     }
 
                 }
             }
-            if (!$done) {
-                $uravo->{db}->do("insert into type_process (type_id, process_id, red)  values (?, ?, ?)", undef, ($self->id(), $proc->{proc_id}, $proc->{red}));
+            if ($match == 0 and $mode >= 0) {
+                $uravo->{db}->do("insert into type_process (type_id, process_id, yellow, red)  values (?, ?, ?, ?)", undef, ($self->id(), $proc->{proc_id}, $proc->{yellow}, $proc->{red}));
                 $uravo->changelog({object_type=>$self->{object_type},object_id=>$self->id(),field_name=>'added process', new_value=>$proclist->{$proc->{proc_id}}{name}},$changelog);
             }
         }
@@ -196,17 +225,17 @@ sub update {
         my $type_module = $uravo->{db}->selectall_arrayref("SELECT module_id,enabled from type_module WHERE type_id=?", {Slice=>{}}, ($self->id())) || die($uravo->{db}->errstr);
         # Delete modules that are in the database but are not in our new list.
         foreach my $dbmodule (@$type_module) {
-            my $done = 0;
+            my $match = 0;
             foreach my $module_id ( keys %$value ) {
                 if ($module_id eq $dbmodule->{module_id}) {
                     if ($value->{$module_id} != $dbmodule->{enabled}) {
                         $uravo->{db}->do("UPDATE type_module SET enabled=? WHERE type_id=? and module_id=?", undef, ($value->{$module_id}, $self->id(), $module_id)) || die($uravo->{db}->errstr);
                     }
-                    $done = 1;
+                    $match = 1;
                     last;
                 }
             }
-            if ((!$done and $mode == 0) or ($done and $mode < 0)) {
+            if ((!$match and $mode == 0) or ($match and $mode < 0)) {
                 $uravo->{db}->do("delete from type_module where type_id=? and module_id=?", undef, ($self->id(), $dbmodule->{module_id})) || die($uravo->{db}->errstr);
                 $uravo->changelog({object_type=>$self->{object_type},object_id=>$self->id(),field_name=>'deleted module', old_value=>$dbmodule->{module_id}},$changelog);
             }
@@ -214,18 +243,18 @@ sub update {
 
         # Add modules that are in our list but not in the database.
         foreach my $module_id ( keys %$value ) {
-            my $done = 0;
+            my $match = 0;
             foreach my $dbmodule (@$type_module) {
                 if ($module_id eq $dbmodule->{module_id}) {
                     # TODO: I don't *think* we need to do this again? We should have gotten all the common items in the delete loop
                     #if ($value->{$module_id} != $dbmodule->{enabled}) {
                     #    $uravo->{db}->do("UPDATE type_module SET enabled=? WHERE type_id=? and module_id=?", undef, ($value->{$module_id}, $self->id(), $module_id)) || die($uravo->{db}->errstr);
                     #}
-                    $done = 1;
+                    $match = 1;
                     last;
                 }
             }
-            if ($done == 0 and $mode >= 0) {
+            if ($match == 0 and $mode >= 0) {
                 $uravo->{db}->do("insert into type_module (type_id, module_id, enabled)  values (?, ?, ?)", undef, ($self->id(), $module_id, $value->{$module_id})) || die($uravo->{db}->errstr);
                 $uravo->changelog({object_type=>$self->{object_type},object_id=>$self->id(),field_name=>'added module', new_value=>$module_id},$changelog);
             }
@@ -281,9 +310,9 @@ sub getProcs {
     my $proc_list;
 
     my $type_id = $self->id();
-    my $results = $uravo->{db}->selectall_arrayref('SELECT p.name, tp.red FROM process p, type_process tp WHERE p.process_id = tp.process_id AND tp.type_id=?', {Slice=>{}}, ($type_id));
+    my $results = $uravo->{db}->selectall_arrayref('SELECT process_id, red, yellow FROM type_process  WHERE type_id=?', {Slice=>{}}, ($type_id));
     foreach my $result (@$results) {
-        $proc_list->{$result->{name}} = $result->{red};
+        $proc_list->{$result->{process_id}} = {red=>$result->{red}, yellow=>$result->{yellow}, proc_id=>$result->{process_id}};
     }
 
     return $proc_list;

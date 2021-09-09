@@ -17,3 +17,16 @@ ALTER TABLE monitoring_values CHANGE AlertKey AlertKey varchar(255) NOT NULL;
 ALTER TABLE monitoring_values CHANGE cluster_id cluster_id varchar(255) NOT NULL;
 ALTER TABLE monitoring_values CHANGE type_id type_id varchar(255) NOT NULL;
 ALTER TABLE monitoring_values CHANGE server_id server_id varchar(255) NOT NULL;
+
+ALTER TABLE process DROP process_id;
+ALTER TABLE process CHANGE name process_id varchar(20) NOT NULL PRIMARY KEY;
+ALTER TABLE type_process CHANGE process_id process_id varchar(20) NOT NULL;
+UPDATE type_process SET process_id='sshd' WHERE process_id=1;
+UPDATE type_process SET process_id='ntpd' WHERE process_id=2;
+UPDATE type_process SET process_id='pylon' WHERE process_id=4;
+UPDATE type_process SET process_id='outpost.pl' WHERE process_id=6;
+UPDATE type_process SET process_id='control.pl' WHERE process_id=7;
+UPDATE type_process SET process_id='mysqld' WHERE process_id=8;
+UPDATE type_process SET process_id='httpd' WHERE process_id=9;
+UPDATE type_process SET process_id='crond' WHERE process_id=10;
+

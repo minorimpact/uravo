@@ -32,7 +32,7 @@ sub run {
     }
 
     foreach my $proc (sort keys %$procs) {
-        my $expr = $procs->{$proc} || '>=1';
+        my $expr = $procs->{$proc}->{red} || '>0';
 
         my $process_count = 0;
         my $defunct_count = 0;
@@ -47,7 +47,7 @@ sub run {
         }
 
         my $Severity = 'green';
-        my $Summary = sprintf "%-s (%s) - %3d %s", $proc, $expr, $process_count, "instance".($process_count == 1 ? '' : 's')." running";
+        my $Summary = sprintf "%-s (%s) - %d %s", $proc, $expr, $process_count, "instance".($process_count == 1 ? '' : 's');
         $expr = "=$expr" if ($expr =~/^=[0-9]+/);
         my $true = "";
         eval "\$true = (\$process_count $expr)";

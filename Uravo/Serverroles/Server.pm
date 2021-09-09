@@ -121,11 +121,16 @@ sub getProcs {
         die "invalid type:$type_id\n" unless ($type);
         my $pl   = $type->getProcs();
         foreach my $proc (keys %$pl) {
-           if ($proc_list->{$proc}) {
-               $proc_list->{$proc}  = $pl->{$proc} if ($proc_list->{$proc} lt $pl->{$proc});
-           } else {
-               $proc_list->{$proc}  = $pl->{$proc};
-           }
+            # TODO: Figure out a better way to make this work -- it's going through all the types and looking for the "most" running processes to use
+            #   for monitoring... but there are two problems.  The first is that I changed it from a simple number to a hash with "red" and "yellow" elements.
+            #   The second is that it's never been a simple number -- it's always been a string in form of ">5", "=1" or "<3".  So I don't know what it was
+            #   doing, and I'm just going to let it use the last one it finds.
+           #if ($proc_list->{$proc}) {
+           #    $proc_list->{$proc}  = $pl->{$proc} if ($proc_list->{$proc} lt $pl->{$proc});
+           #} else {
+           #   $proc_list->{$proc}  = $pl->{$proc};
+           #}
+           $proc_list->{$proc}  = $pl->{$proc};
        }
    }
    return $proc_list;

@@ -48,13 +48,13 @@ INSERT INTO `monitoring_default_values` (`id`, `AlertGroup`, `AlertKey`, `descri
 INSERT INTO `network` (`network`, `network_order`, `default_interface_name`, `mod_date`, `create_date`) VALUES ('backnet',0, 'eth1', NOW(),NOW());
 INSERT INTO `network` (`network`, `network_order`, `default_interface_name`, `mod_date`, `create_date`) VALUES ('frontnet',1, 'eth0', NOW(),NOW());
 
-INSERT INTO `process` (`process_id`, `name`, `create_date`, `mod_date`) VALUES (1,'sshd',NOW(),NOW());
-INSERT INTO `process` (`process_id`, `name`, `create_date`, `mod_date`) VALUES (2,'pylon',NOW(),NOW());
-INSERT INTO `process` (`process_id`, `name`, `create_date`, `mod_date`) VALUES (3,'outpost.pl',NOW(),NOW());
-INSERT INTO `process` (`process_id`, `name`, `create_date`, `mod_date`) VALUES (4,'control.pl',NOW(),NOW());
-INSERT INTO `process` (`process_id`, `name`, `create_date`, `mod_date`) VALUES (5,'mysqld',NOW(),NOW());
-INSERT INTO `process` (`process_id`, `name`, `create_date`, `mod_date`) VALUES (6,'httpd',NOW(),NOW());
-INSERT INTO `process` (`process_id`, `name`, `create_date`, `mod_date`) VALUES (7,'crond',NOW(),NOW());
+INSERT INTO `process` (`process_id`, `create_date`, `mod_date`) VALUES ('sshd',NOW(),NOW());
+INSERT INTO `process` (`process_id`, `create_date`, `mod_date`) VALUES ('pylon',NOW(),NOW());
+INSERT INTO `process` (`process_id`, `create_date`, `mod_date`) VALUES ('outpost.pl',NOW(),NOW());
+INSERT INTO `process` (`process_id`, `create_date`, `mod_date`) VALUES ('control.pl',NOW(),NOW());
+INSERT INTO `process` (`process_id`, `create_date`, `mod_date`) VALUES ('mysqld',NOW(),NOW());
+INSERT INTO `process` (`process_id`, `create_date`, `mod_date`) VALUES ('httpd',NOW(),NOW());
+INSERT INTO `process` (`process_id`, `create_date`, `mod_date`) VALUES ('crond',NOW(),NOW());
 
 INSERT INTO `rack` (`rack_id`, `cage_id`, `x_pos`, `y_pos`, `create_date`, `mod_date`) VALUES ('unknown','unknown',1,1,NOW(),NOW());
 
@@ -110,10 +110,10 @@ INSERT INTO `type_module` (`type_id`, `module_id`, `create_date`) VALUES ('outpo
 INSERT INTO `type_module` (`type_id`, `module_id`, `create_date`) VALUES ('webserver','http',NOW());
 INSERT INTO `type_module` (`type_id`, `module_id`, `create_date`) VALUES ('website','http',NOW());
 
-INSERT INTO `type_process` (`type_id`, `process_id`, `yellow`, `red`) VALUES ('db',5,'','>0');
-INSERT INTO `type_process` (`type_id`, `process_id`, `yellow`, `red`) VALUES ('control',4,'','=1');
-INSERT INTO `type_process` (`type_id`, `process_id`, `yellow`, `red`) VALUES ('linux',1,'>1','>0');
-INSERT INTO `type_process` (`type_id`, `process_id`, `yellow`, `red`) VALUES ('linux',7,'','>0');
-INSERT INTO `type_process` (`type_id`, `process_id`, `yellow`, `red`) VALUES ('outpost',3,'','=1');
-INSERT INTO `type_process` (`type_id`, `process_id`, `yellow`, `red`) VALUES ('pylon',2,'','>0');
-INSERT INTO `type_process` (`type_id`, `process_id`, `yellow`, `red`) VALUES ('webserver',6,'','>=5');
+INSERT INTO `type_process` (`type_id`, `process_id`, `yellow`, `red`) VALUES ('db','mysqld','','>0');
+INSERT INTO `type_process` (`type_id`, `process_id`, `yellow`, `red`) VALUES ('control','control.pl','','=1');
+INSERT INTO `type_process` (`type_id`, `process_id`, `yellow`, `red`) VALUES ('linux','sshd','>1','>0');
+INSERT INTO `type_process` (`type_id`, `process_id`, `yellow`, `red`) VALUES ('linux','crond','','>0');
+INSERT INTO `type_process` (`type_id`, `process_id`, `yellow`, `red`) VALUES ('outpost','outpost.pl','','=1');
+INSERT INTO `type_process` (`type_id`, `process_id`, `yellow`, `red`) VALUES ('pylon','pylon','','>0');
+INSERT INTO `type_process` (`type_id`, `process_id`, `yellow`, `red`) VALUES ('webserver','httpd','','>=5');

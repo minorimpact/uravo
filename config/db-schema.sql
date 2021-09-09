@@ -553,8 +553,7 @@ CREATE TABLE `new_alert` (
 
 DROP TABLE IF EXISTS `process`;
 CREATE TABLE `process` (
-  `process_id` int(11) NOT NULL AUTO_INCREMENT,
-  `name` varchar(32) NOT NULL DEFAULT '',
+  `process_id` varchar(20) NOT NULL,
   `create_date` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
   `mod_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`process_id`)
@@ -748,7 +747,7 @@ CREATE TABLE `type_module` (
 DROP TABLE IF EXISTS `type_process`;
 CREATE TABLE `type_process` (
   `type_id` varchar(20) NOT NULL DEFAULT '',
-  `process_id` int(11) NOT NULL DEFAULT '0',
+  `process_id` varchar(20) NOT NULL DEFAULT '',
   `yellow` varchar(5) DEFAULT '',
   `red` varchar(5) DEFAULT '',
   UNIQUE KEY `type_id` (`type_id`,`process_id`)
