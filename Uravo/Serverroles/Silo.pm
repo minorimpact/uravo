@@ -3,6 +3,7 @@ package Uravo::Serverroles::Silo;
 use strict;
 
 use Uravo;
+use Uravo::Util;
 use Data::Dumper;
 
 my $uravo;
@@ -73,10 +74,11 @@ sub getBU {
 
 sub _list {
     my $params = shift;
+    Uravo::Util::clean_params($params);
 
     my $where   = "where silo.silo_id is not null and silo.bu_id=bu.bu_id";
-    if ($params->{silo} || $params->{silo_id}) { $where .= " and silo.silo_id = '" . ($params->{silo} || $params->{silo_id}) . "'"; }
-    if ($params->{bu} || $params->{bu_id}) { $where .= " and bu.bu_id = '" . ($params->{bu} || $params->{bu_id}) . "'"; }
+    if ($params->{silo_id}) { $where .= " and silo.silo_id = '" . ($params->{silo_id}) . "'"; }
+    if ($params->{bu_id}) { $where .= " and bu.bu_id = '" . ($params->{bu_id}) . "'"; }
     if ($params->{name}) { $where .= " and silo.name = '" . ($params->{name}) . "'"; }
 
     $uravo ||= new Uravo;

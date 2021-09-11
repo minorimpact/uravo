@@ -540,5 +540,14 @@ sub dateDelta {
     return ($years, $months, $days, $hours, $minutes, $seconds);
 }
 
+sub clean_params {
+	my $params = shift || die;
+    foreach my $o ('bu', 'netblock', 'server', 'silo', 'type') {
+        my $o_id = $o . "_id";
+        if (defined($params->{$o}) && !defined($params->{$o_id})) { $params->{$o_id} = $params->{$o}; }
+    }
+    return $params;
+}
+
 
 1;
