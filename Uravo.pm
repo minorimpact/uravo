@@ -246,8 +246,7 @@ sub getRack {
 
 sub getServers {
     my $self	    = shift || die;
-    my $params	    = shift || {};
-    $params = Uravo::Util::clean_params($params);
+    my $params      = Uravo::Util::clean_params(shift || {});
 
     $self->log("Uravo::getServers()",5);
     if (!defined($params->{silo_id}) && $params->{all_silos} != 1) {

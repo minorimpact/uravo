@@ -444,25 +444,34 @@ sub usage {
 }
 
 sub getLocalTypes {
-    my @types;
+    my @types = ();
     foreach my $type ($uravo->getTypes()) {
         my $type_id = $type->id();
+        next if ($type_id eq "unknown");
         my $auto_id_type = $type->get('auto_id_type');
         my $auto_id_source = $type->get('auto_id_source');
         my $auto_id_text = $type->get('auto_id_text');
 
         if ( $auto_id_type eq 'file' && -f $auto_id_source) {
-            open(FILE, "<$auto_id_source");
-            while (<FILE>) {
-                if (/$auto_id_text/) {
-                    push(@types, $type_id);
-                    last;
+            if ($auto_id_text) {
+                open(FILE, "<$auto_id_source");
+                while (<FILE>) {
+                    if (/$auto_id_text/) {
+                        push(@types, $type_id);
+                        last;
+                    }
                 }
+                close(FILE);
+            } 
+            else {
+                push(@types, $type_id);
             }
-            close(FILE);
         }
     }
 
+    if (scalar(@types) == 0) {
+        push(@types, "unknown");
+    }
     return @types;
 }
 

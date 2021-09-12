@@ -15,7 +15,6 @@ GetOptions("delim=s"   => \$delim,
            "verbose"   => \$verbose,
            "help"      => sub { usage(); },
            "flat"      => sub { $delim=' ' },
-           "params=s%" => \$params
          ) || usage();
 
 
@@ -28,16 +27,17 @@ sub main {
     my $action  = shift @ARGV;
 
     foreach my $param (@ARGV)  {
-        if ($param =~ /^(\w+)=(\S+)$/) {
+        if ($param =~ /^(\w+)="([^"]*")$/) {
             $params->{$1}  = $2;
-        } else {
+        }
+        elsif ($param =~ /^(\w+)=(\S*)$/) {
+            $params->{$1}  = $2;
+        }
+         else {
             push @args, $param;
         }
     }
     $params = Uravo::Util::clean_params($params);
-    if (!defined($params->{silo_id})) {
-        $params->{all_silos} = 1;
-    }
     eval "do_$action(\$params)";
     print "$@\n" if ($@);
 }
@@ -154,6 +154,9 @@ sub do_info {
 
 sub do_list {
     my $local_params = Uravo::Util::clean_params(shift || {});
+    if (!defined($local_params->{silo_id})) {
+        $local_params->{all_silos} = 1;
+    }
     $local_params->{id_only} = 1;
     $arg = shift(@args);
     $arg =~s/s$//;

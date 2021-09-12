@@ -499,22 +499,42 @@ sub update {
         #if ($value ne $self->type_id()) {
             #$uravo->changelog({object_type=>$self->{object_type}, object_id=>$self->id(),field_name=>'type_id',old_value=>$self->type_id(), new_value=>$value},$changelog);
             my @types = ();
+            my $mode = 0;
             if (ref($value) eq "ARRAY") {
                 foreach my $t (@$value) {
                     next if (!$t || $t eq 'none');
                     push(@types, $t);
                 }
             } else {
+                if ($value =~s/^\+//) {
+                    $mode = 1;
+                }
+                elsif ($value =~s/^\-//) {
+                    $mode = -1;
+                }
                 @types = split(',', $value);
             }
             for my $type_id (@types) {
                 die "can't set server to non-existent type '$type_id'" if (!$uravo->getType($type_id));
             }
 
-            $uravo->{db}->do("DELETE FROM server_type WHERE server_id=?", undef, ($self->id())) || die ($uravo->{db}->errstr);
-            for my $type_id (@types) {
-                $uravo->{db}->do("INSERT INTO server_type (server_id, type_id, create_date) values (?, ?, NOW())", undef, ($self->id(), $type_id)) || die ($uravo->{db}->errstr);
+            if ($mode == 0) {
+                $uravo->{db}->do("DELETE FROM server_type WHERE server_id=?", undef, ($self->id())) || die ($uravo->{db}->errstr);
+                for my $type_id (@types) {
+                    $uravo->{db}->do("INSERT INTO server_type (server_id, type_id, create_date) values (?, ?, NOW())", undef, ($self->id(), $type_id)) || die ($uravo->{db}->errstr);
+                }
             }
+            elsif ($mode == -1) {
+                for my $type_id (@types) {
+                    $uravo->{db}->do("DELETE FROM server_type WHERE server_id=? AND type_id=?", undef, ($self->id(), $type_id)) || die ($uravo->{db}->errstr);
+                }
+            }
+            elsif ($mode == 1) {
+                for my $type_id (@types) {
+                    $uravo->{db}->do("INSERT INTO server_type (server_id, type_id, create_date) values (?, ?, NOW())", undef, ($self->id(), $type_id)) || die ($uravo->{db}->errstr);
+                }
+            }
+                
             $self->{type_ids} = \@types;
         #}
         return $changelog;
