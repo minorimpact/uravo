@@ -1,0 +1,3 @@
+URAVO_DIR=/opt/uravo
+* * * * * uravo $URAVO_DIR/bin/control.pl&
+

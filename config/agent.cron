@@ -1,0 +1,4 @@
+URAVO_DIR=/opt/uravo
+* * * * * uravo /bin/touch $URAVO_DIR/run/crond.running
+22 */6 * * * uravo $URAVO_DIR/bin/update_uravo.pl > /tmp/update_uravo.pl 2>&1
+*/5 * * * * uravo $URAVO_DIR/bin/agent.pl > /tmp/agent.pl.log 2>&1
