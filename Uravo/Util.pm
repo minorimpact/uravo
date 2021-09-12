@@ -3,6 +3,7 @@ package Uravo::Util;
 use strict;
 
 use Uravo;
+use MinorImpact;
 
 use Fcntl qw(:flock);
 use POSIX qw(floor);
@@ -542,11 +543,12 @@ sub dateDelta {
 
 sub clean_params {
 	my $params = shift || die;
-    foreach my $o ('bu', 'netblock', 'server', 'silo', 'type') {
+    my $local_params = MinorImpact::cloneHash($params);
+    foreach my $o ('bu', 'cage', 'cluster', 'interface', 'netblock', 'rack', 'server', 'silo', 'type') {
         my $o_id = $o . "_id";
-        if (defined($params->{$o}) && !defined($params->{$o_id})) { $params->{$o_id} = $params->{$o}; }
+        if (defined($local_params->{$o}) && !defined($local_params->{$o_id})) { $local_params->{$o_id} = $local_params->{$o}; }
     }
-    return $params;
+    return $local_params;
 }
 
 

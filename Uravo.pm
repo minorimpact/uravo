@@ -2,6 +2,10 @@ package Uravo;
 
 use strict;
 
+use Data::Dumper;
+use DBI;
+use Digest::MD5 qw(md5_hex);
+use JSON;
 use Uravo::Config;
 use Uravo::Event;
 use Uravo::Serverroles::Server;
@@ -13,11 +17,8 @@ use Uravo::Serverroles::Rack;
 use Uravo::Serverroles::Netblock;
 use Uravo::Serverroles::Cage;
 use Uravo::Serverroles::Module;
+use Uravo::Util;
 use Socket;
-use Digest::MD5 qw(md5_hex);
-use JSON;
-use DBI;
-use Data::Dumper;
 
 my $uravo;
 
@@ -244,11 +245,12 @@ sub getRack {
 }
 
 sub getServers {
-    my $self	    = shift || return;
-    my $params	    = shift;
+    my $self	    = shift || die;
+    my $params	    = shift || {};
+    $params = Uravo::Util::clean_params($params);
 
     $self->log("Uravo::getServers()",5);
-    if (!defined($params->{silo_id}) && !defined($params->{silo}) && $params->{all_silos} != 1) {
+    if (!defined($params->{silo_id}) && $params->{all_silos} != 1) {
         # Figure out who I am, then I can use my info to limit my queries to my own silo.
         my $server      = $self->getServer();
         $params->{silo_id} = $server->get('silo_id');

@@ -8,6 +8,7 @@ use MinorImpact;
 use Uravo::Serverroles::Interface;
 use Uravo::InfluxDB;
 use Uravo::Pylon;
+use Uravo::Util;
 
 my $uravo;
 my $ranges      = {'2d'=>'hourly', '1w'=>'daily', '1m'=>'weekly', '3m'=>'weekly', '2y'=>'monthly'};
@@ -559,8 +560,9 @@ sub link {
     return $ret || $self->link();
 }
 
-sub add {
-    my $params = shift || return;
+sub add{
+    my $params = shift || die;
+    $params = Uravo::Util::clean_params($params);
     my $changelog = shift || {note=>'Uravo::Serverroles::Server::add()', user=>$0};
 
     $uravo ||= new Uravo;

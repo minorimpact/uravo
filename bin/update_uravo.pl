@@ -211,7 +211,7 @@ sub collect_server_data {
         }
 #eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
 #        inet 165.227.30.221  netmask 255.255.240.0  broadcast 165.227.31.255
-        if ($line =~ /^((eth|bond)\d(\.\d)?:?\d*)\s/) {
+        if ($line =~ /^((eth|bond|br)\d(\.\d)?:?\d*)\s/) {
             $i = $1;
             $i =~s/:$//;
         }

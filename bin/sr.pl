@@ -34,17 +34,27 @@ sub main {
             push @args, $param;
         }
     }
+    $params = Uravo::Util::clean_params($params);
+    if (!defined($params->{silo_id})) {
+        $params->{all_silos} = 1;
+    }
     eval "do_$action(\$params)";
     print "$@\n" if ($@);
 }
 
 sub do_add {
     my $params = shift;
-    my $local_params = MinorImpact::cloneHash($params);
+    my $local_params = Uravo::Util::clean_params(MinorImpact::cloneHash($params));
 
     my $arg = shift(@args);
     $arg =~s/s$//;
-    if ($arg eq 'server') {
+    if ($arg eq 'cluster') {
+        my $id = shift(@args) || $local_params->{cluster_id};
+        if ($id && !defined($local_params->{cluster_id})) { $local_params->{cluster_id} = $id; }
+        die("you must specify cluster_id") unless ($id);
+        Uravo::Serverroles::Cluster::add($local_params);
+    }
+    elsif ($arg eq 'server') {
         my $id = shift(@args) || $local_params->{server_id};
         if ($id && !defined($local_params->{server_id})) { $local_params->{server_id} = $id; }
         die("you must specify server_id") unless ($id);
@@ -74,6 +84,9 @@ sub do_add {
         die("you must specify type_id") unless (defined($type_id));
         Uravo::Serverroles::Type::add($local_params);
     }
+    else {
+        die("unknown item '$arg'");
+    }
 }
 
 sub do_del {
@@ -99,6 +112,12 @@ sub do_delete {
         return unless $event;
         print("deleting " . $event->toString() . "\n") if ($verbose);
         $event->clear();
+    }
+    elsif ($arg eq 'cluster') {
+        my $id = shift(@args) || $local_params->{cluster_id};
+        if ($id && !defined($local_params->{cluster_id})) { $local_params->{cluster_id} = $id; }
+        die("you must specify cluster_id") unless ($id);
+        Uravo::Serverroles::Cluster::delete($local_params);
     }
     elsif ($arg eq 'silo' ) {
         my $id = shift(@args) || $local_params->{silo_id};
@@ -134,18 +153,15 @@ sub do_info {
 }
 
 sub do_list {
-    my $params  = shift;
-    my $local_params = MinorImpact::cloneHash($params);
+    my $local_params = Uravo::Util::clean_params(shift || {});
     $local_params->{id_only} = 1;
-    if (!defined($local_params->{silo}) && !defined($local_params->{silo_id})) {
-        $local_params->{all_silos} = 1;
-    }
     $arg = shift(@args);
     $arg =~s/s$//;
     if ($arg eq "check") {
     }
     elsif ($arg eq "cluster") {
         print join($delim, $uravo->getClusters($local_params, {id_only=>1}));
+        print "\n";
     }
     elsif ($arg eq "event" ) {
         my @events = $uravo->getEvents($local_params, {id_only=>1});
@@ -165,7 +181,6 @@ sub do_list {
     }
     elsif ($arg eq "silo" ) {
         print join($delim, $uravo->getSilos($local_params, {id_only=>1}));
-        print "\n";
     }
     elsif ($arg eq "threshold" ) {
         my $server = $local_params->{server_id} ? $uravo->getServer($oocal_params->{server_id}) : $uravo->getServer();
@@ -186,6 +201,10 @@ sub do_list {
     }
     elsif ($arg eq "type" ) {
         print join($delim, $uravo->getTypes($local_params, {id_only=>1}));
+        print "\n";
+    }
+    else {
+        die("unknown item '$arg'");
     }
 }
 
@@ -193,8 +212,16 @@ sub do_show {
     my $params  = shift;
     my $local_params = MinorImpact::cloneHash($params);
     my $arg = shift(@args);
-    if ($arg eq "netblock") {
-        my $id = shift(@args) || (defined($local_params->{netblock_id})?$local_params->{netblock_id}:$uravo->getServer()->id());
+    if ($arg eq "cluster") {
+        my $id = shift(@args) || $local_params->{cluster_id};
+        if ($id && !defined($local_params->{cluster_id})) { $local_params->{cluster_id} = $id; }
+        my $cluster = $uravo->getCluster($id);
+        if ($cluster) {
+            print($cluster->info());
+        }
+    }
+    elsif ($arg eq "netblock") {
+        my $id = shift(@args) || (defined($local_params->{netblock_id})?$local_params->{netblock_id}:$uravo->get()->id());
         my $netblock = $uravo->getNetblock($id);
         if ($netblock) {
             print($netblock->info());
@@ -216,20 +243,26 @@ sub do_update {
     my $arg = shift(@args);
     $arg =~s/s$//;
     if ($arg eq "bu") {
-        $id = shift(@args);
+        $id = shift(@args) || $local_params->{bu_id};
         if ($id && !defined($local_params->{bu_id})) { $local_params->{bu_id} = $id; }
         die("you must specify bu_id") unless (defined($local_params->{bu_id}));
         $bu = new Uravo::Serverroles::BU($local_params->{bu_id});
         $bu->update($local_params);
         print("updated " . $bu->id() . "\n") if ($verbose);
     }
-    elsif ($arg eq "server" ) {
-        my $server = $uravo->getServer();
-        if (defined($local_params->{server_id})) {
-            $server = $uravo->getServer($local_params->{server_id});
+    elsif ($arg eq "cluster" ) {
+        my $id = shift(@args) || (defined($local_params->{cluster_id})?$local_params->{cluster_id}:undef);
+        my $cluster = $id ? $uravo->getCluster($id) : $uravo->getCluster();
+        if ($cluster) {
+            print("updating " . $cluster->id() . "\n");
+            $cluster->update($local_params);
         }
-        if (defined($server)) {
-            print("updating " . $server->hostname() . "\n");
+    }
+    elsif ($arg eq "server" ) {
+        my $id = shift(@args) || (defined($local_params->{server_id})?$local_params->{server_id}:undef);
+        my $server = $id ? $uravo->getServer($id) : $uravo->getServer();
+        if ($server) {
+            print("updating " . $server->id() . "\n");
             $server->update($local_params);
         }
     }

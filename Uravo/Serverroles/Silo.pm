@@ -73,8 +73,7 @@ sub getBU {
 }
 
 sub _list {
-    my $params = shift;
-    Uravo::Util::clean_params($params);
+    my $params = Uravo::Util::clean_params(shift || {});
 
     my $where   = "where silo.silo_id is not null and silo.bu_id=bu.bu_id";
     if ($params->{silo_id}) { $where .= " and silo.silo_id = '" . ($params->{silo_id}) . "'"; }
