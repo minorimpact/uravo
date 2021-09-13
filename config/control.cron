@@ -1,3 +1,2 @@
-URAVO_DIR=/opt/uravo
-* * * * * uravo $URAVO_DIR/bin/control.pl&
+* * * * * /opt/uravo/bin/control.pl
 
