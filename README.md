@@ -82,7 +82,7 @@ Things are not far enough along yet to start building packages.
 ```
     [~]$ brew install mysql-client cpanminus
 ```
-Honestly, getting this installed on a mac is kind of a pain in the ass.  The main issue is DBD::mysql, which complains that it can't find a particular header.  The solution was, vaguely, to find missing files my system, set $PASTHRU_INC to "-I<dir that contained one header> -I<dir that contained the second header>", then recompile and reinstall DBI and DBD::mysql by hand.
+Honestly, getting this installed on a mac is kind of a pain in the ass.  The main issue is DBD::mysql, which complains that it can't find a particular header.  The solution was, vaguely, to find the location of files my system, set $PASTHRU_INC to "-I&lt;dir that contained one header> -I&lt;dir that contained the second header>", then recompile and reinstall DBI and DBD::mysql by hand.
 
 #### Linux General
 
