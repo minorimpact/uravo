@@ -900,7 +900,6 @@ sub info {
         $output .= "\n";
     }
 
-
     return $output;
 }
 

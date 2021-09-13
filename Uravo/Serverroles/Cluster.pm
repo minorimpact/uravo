@@ -297,7 +297,7 @@ sub info {
     $output .= "name:" . $self->id() . "\n";
     $output .= "silo_id:" . $self->getSilo()->id() . "\n";
 
-    print $output;
+    return $output;
 }
 
 # Misc info functions.

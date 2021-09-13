@@ -55,8 +55,8 @@ sub info {
     $output .= "discovery:" . ($self->get('discovery')?"yes":"no") . "\n";
     $output .= "network:" . $self->get('network') . "\n";
     $output .= "silo_id:" . $self->getSilo()->id() . "\n";
-    print $output;
-    return;
+
+    return $output;
 }
 
 sub _list {

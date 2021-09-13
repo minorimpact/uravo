@@ -544,7 +544,7 @@ sub dateDelta {
 sub clean_params {
 	my $params = shift || die;
     my $local_params = MinorImpact::cloneHash($params);
-    foreach my $o ('bu', 'cage', 'cluster', 'interface', 'netblock', 'rack', 'server', 'silo', 'type') {
+    foreach my $o ('bu', 'cage', 'cluster', 'interface', 'module', 'netblock', 'rack', 'server', 'silo', 'type') {
         my $o_id = $o . "_id";
         if (defined($local_params->{$o}) && !defined($local_params->{$o_id})) { $local_params->{$o_id} = $local_params->{$o}; }
     }
