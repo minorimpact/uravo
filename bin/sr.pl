@@ -136,11 +136,13 @@ sub do_delete {
         $uravo->deleteThreshold($local_params);
     }
     elsif ($arg eq 'type' ) {
-        die("you must specify type_id") unless (defined($local_params->{type_id}));
-        my $type = $uravo->getType($local_params->{type_id});
+        my $id = shift(@args) || $local_params->{type_id};
+        if ($id && !defined($local_params->{type_id})) { $local_params->{type_id} = $id; }
+        die("you must specify type_id") unless ($id);
+        my $type = $uravo->getType($id);
         die("invalid type") unless ($type);
         print("deleting " . $type->toString() . "\n") if ($verbose);
-        $type->delete();
+        Uravo::Serverroles::Type::delete($local_params);
     }
 }
 
@@ -236,6 +238,16 @@ sub do_show {
         if ($server) {
             print($server->info());
         }
+    }
+    elsif ($arg eq "type") {
+        my $id = shift(@args) || (defined($local_params->{type_id})?$local_params->{type_id}:$uravo->getType()->id());
+        my $type = $uravo->getType($id);
+        if ($type) {
+            print($type->info());
+        }
+    }
+    else {
+        die "unknown item $arg";
     }
 }
 
