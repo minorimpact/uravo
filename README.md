@@ -4,7 +4,7 @@
 2. [Installation](#installation)
 3. [Configuration](#configuration)
 4. [Updating](#updating)
-5. [Database](Docs/Database.md)
+5. [Database](doc/Database.md)
  
 ## Overview
 
