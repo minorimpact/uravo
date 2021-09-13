@@ -91,8 +91,15 @@ sub execCron {
     my $output_error;
     my $exit_status;
     my $output_file = "/tmp/cron.$pid.output";
-
-    my $script_name = `/bin/ps -p $pid --no-headers -o command`;
+    my $script_name;
+    if ($^O eq 'darwin') {
+        $script_name = `/bin/ps -p $pid -o command`;
+        $script_name =~s#^COMMAND\n##i;
+    }
+    else {
+        $script_name = `/bin/ps -p $pid -o cmd`;
+        $script_name =~s#^CMD\n##i;
+    }
     $script_name =~s#^/usr/bin/perl\s+(-[a-zA-Z\/]+\s+)?##;
     $script_name =~s#^/usr/local/bin/perl\s+(-[a-zA-Z\/]+\s+)?##;
     $script_name =~s#^/bin/sh -c\s+##;
