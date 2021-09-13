@@ -123,7 +123,7 @@ EOF
 	[~/lib]$ ln -s $HOME/dev/perl-uravo/MinorImpact
 	[~/lib]$ cd ..
 ```
-Create the '/opt/uravo' directory and create symlinks to $HOME/dev/uravo.  This is where the package will ultimately install everything, so things shouldn't have to adjusted too much once we get there.
+Create the '/opt/uravo' directory and create symlinks to $HOME/dev/uravo.  This is where the package will ultimately install everything, so things shouldn't have to be adjusted too much once we get there.
 ```
     [~]$ sudo mkdir /opt/uravo
     [~]$ sudo chown $USER /opt/uravo
@@ -133,16 +133,21 @@ Create the '/opt/uravo' directory and create symlinks to $HOME/dev/uravo.  This 
 ```
 Add /opt/uravo/bin and $HOME/lib to your PATH and PERL5LIB variabled, respectively:
 ```
-	[~]$ cat << EOF >> $HOME/.bashrc
+    [~]$ cat << EOF >> $HOME/.bashrc
 PERL5LIB=\$HOME/lib:\$PERL5LIB; export PERL5LIB
 PATH=/opt/uravo/bin:\$PATH; export PATH
 EOF
     [~]$ . .bashrc
-
-	[~]$ ssh -nNT -L 3306:127.0.0.1:3306 db.example.com &
-	[~]$ outpost.pl &
-	[~]$ update_uravo.pl --verbose
-	[~]$ agent.pl --verbose --nosleep
+```
+If this machine can't connect directly to the database, create an ssh tunnel, or something (this will be very specific to your installation setup):
+```
+    [~]$ ssh -nNT -L 3306:127.0.0.1:3306 db.example.com &
+```
+Start the outpost and try running the scripts manually and see if anything's working:
+```
+    [~]$ outpost.pl &
+    [~]$ update_uravo.pl --verbose
+    [~]$ agent.pl --verbose --nosleep
 ```
 Add the appropriate crontab entries to make sure they run continuosly:
 ```
