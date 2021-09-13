@@ -76,7 +76,12 @@ sub info {
     my $output = "";
     $output .= "name:" . $self->id() . "\n";
     $output .= "auto_id_type:" . $self->get('auto_id_type') . "\n";
-    $output .= "auto_id_source:" . $self->get('auto_id_source') . "\n";
+    if ($self->get('auto_id_type') eq 'variable') {
+        $output .= "auto_id_source:\$" . $self->get('auto_id_source') . "\n";
+    }
+    else {
+        $output .= "auto_id_source:" . $self->get('auto_id_source') . "\n";
+    }
     $output .= "auto_id_text:" . $self->get('auto_id_text') . "\n";
     $output .= "Processes:\n";
     my $procs = $self->getProcs();

@@ -451,6 +451,7 @@ sub getLocalTypes {
         my $auto_id_type = $type->get('auto_id_type');
         my $auto_id_source = $type->get('auto_id_source');
         my $auto_id_text = $type->get('auto_id_text');
+        next unless ($auto_id_type and $auto_id_source);
 
         if ( $auto_id_type eq 'file' && -f $auto_id_source) {
             if ($auto_id_text) {
@@ -465,6 +466,16 @@ sub getLocalTypes {
             } 
             else {
                 push(@types, $type_id);
+            }
+        }
+        elsif ( $auto_id_type eq 'variable') {
+            my $var = "\$$auto_id_source";
+            my $result;
+            eval "\$result = $var";
+            unless ($@) {
+                if (($auto_id_text && $result =~/$auto_id_text/) || $result) {
+                    push(@types, $type_id);
+                }
             }
         }
     }
