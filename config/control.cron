@@ -1,2 +1,7 @@
+<<<<<<< Updated upstream
 * * * * * /opt/uravo/bin/control.pl
+=======
+URAVO_DIR=/opt/uravo
+* * * * * $URAVO_DIR/bin/control.pl &
+>>>>>>> Stashed changes
 

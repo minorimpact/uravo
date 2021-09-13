@@ -1,3 +1,8 @@
+<<<<<<< Updated upstream
 * * * * * /opt/uravo/bin/outpost.pl
 */5 * * * * /opt/uravo/bin/remote_agent.pl
+=======
+URAVO_DIR=/opt/uravo
+* * * * * $URAVO_DIR/bin/outpost.pl &
+>>>>>>> Stashed changes
 

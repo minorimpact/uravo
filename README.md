@@ -68,16 +68,21 @@ Things are not far enough along yet to start building packages.
 
 #### Centos
 ```
-	[~]$ sudo yum install -y mysql-client libmysqlclient-dev cpanminus
+    [~]$ sudo yum install -y mysql-client libmysqlclient-dev cpanminus
 ```
 #### Debian
 ```
-	[~]$ sudo apt install -y mysql-client libmysqlclient-dev cpanminus
+    [~]$ sudo apt install -y mysql-client libmysqlclient-dev cpanminus
 ```
-#### MacOs  
+**or**
 ```
-	[~]$ brew install mysql-client cpanminus
+    [~]$ sudo apt install -y mariadb-client libmariadbclient-dev cpanminus
 ```
+#### MacOS  
+```
+    [~]$ brew install mysql-client cpanminus
+```
+Honestly, getting this installed on a mac is kind of a pain in the ass.  The main issue is DBD::mysql, which complains that it can't find a particular header.  The solution was, vaguely, to find missing files my system, set $PASTHRU_INC to "-I<dir that contained one header> -I<dir that contained the second header>", then recompile and reinstall DBI and DBD::mysql by hand.
 
 #### Linux General
 
@@ -85,17 +90,15 @@ For the time being, it's not assumed Uravo will be running as any particular use
 
 ##### Client
 ```
-	[~]$ mkdir dev
-	[~]$ cd dev
-	[~/dev]$ git clone git@github.com:minorimpact/perl-uravo
-	Cloning into 'perl-uravo'...
-	[~/dev]$ git clone git@github.com:minorimpact/uravo-agent
-	Cloning into 'uravo-agent'...
-	[~/dev]$ git clone git@github.com:minorimpact/perl-minorimpact
-	Cloning into 'perl-minorimpact'...
-	[~/dev]$ cat perl-uravo/requirments.txt | sudo cpanm
-	[~/dev]$ cd ..
-	[~]$ cat << EOF >> uravo.conf
+    [~]$ mkdir dev
+    [~]$ cd dev
+    [~/dev]$ git clone git@github.com:minorimpact/uravo
+    Cloning into 'uravo'...
+    [~/dev]$ git clone git@github.com:minorimpact/perl-minorimpact
+    Cloning into 'perl-minorimpact'...
+    [~/dev]$ cat uravo/requirments.txt | sudo cpanm
+    [~/dev]$ cd ..
+    [~]$ cat << EOF >> uravo.conf
 [agent]
 cmd_timeout = 30
 uravo_log = /tmp/uravo.log
@@ -113,23 +116,23 @@ db_server = db.example.com
 db_port = 3306
 cache_server_port = 14546
 EOF
-	[~]$ sudo mv uravo.conf /etc/
+    [~]$ sudo mv uravo.conf /etc/
 
     [~]$ mkdir lib
     [~]$ cd lib
-	[~/lib]$ ln -s $HOME/dev/perl-uravo/Uravo.pm
-	[~/lib]$ ln -s $HOME/dev/perl-uravo/Uravo
-	[~/lib]$ ln -s $HOME/dev/perl-uravo/MinorImpact.pm
-	[~/lib]$ ln -s $HOME/dev/perl-uravo/MinorImpact
-	[~/lib]$ cd ..
+    [~/lib]$ ln -s $HOME/dev/uravo/Uravo.pm
+    [~/lib]$ ln -s $HOME/dev/uravo/Uravo
+    [~/lib]$ ln -s $HOME/dev/perl-minorimpact/MinorImpact.pm
+    [~/lib]$ ln -s $HOME/dev/perl-minorimpact/MinorImpact
+    [~/lib]$ cd ..
 ```
 Create the '/opt/uravo' directory and create symlinks to $HOME/dev/uravo.  This is where the package will ultimately install everything, so things shouldn't have to be adjusted too much once we get there.
 ```
     [~]$ sudo mkdir /opt/uravo
     [~]$ sudo chown $USER /opt/uravo
     [~]$ mkdir /opt/uravo/run
-    [~]$ ln -s $HOME/dev/uravo-agent/bin /opt/uravo/bin
-    [~]$ ln -s $HOME/dev/uravo-agent/config /opt/uravo/config
+    [~]$ ln -s $HOME/dev/uravo/bin /opt/uravo/bin
+    [~]$ ln -s $HOME/dev/uravo/config /opt/uravo/config
 ```
 Add /opt/uravo/bin and $HOME/lib to your PATH and PERL5LIB variabled, respectively:
 ```
@@ -158,10 +161,10 @@ Add the appropriate crontab entries to make sure they run continuosly:
 ### Database
 The MySQL server that will store the Uravo data. After installing the Uravo RPM, install and configure MySQL, then execute the statements in the db-schema.sql and db-data.sql files.  
 ```
-	[~]# yum install mysql-server 
-	[~]# service mysql start 
-	[~]# cat /opt/uravo/config/db-schema.sql | mysql 
-	[~]# cat /opt/uravo/config/db-data.sql | mysql
+    [~]# yum install mysql-server 
+    [~]# service mysql start 
+    [~]# cat /opt/uravo/config/db-schema.sql | mysql 
+    [~]# cat /opt/uravo/config/db-data.sql | mysql
 ```
 
 The script will create a 'uravo' user with the password 'uravo'. If you want to change this, be sure you also update the configuration.
@@ -185,7 +188,7 @@ Like outpost.pl, control.pl is designed to exit cleanly if a process is already 
 #### remote_agent.pl
 By default the remote agent will run on the outpost server (it's included in the [outpost cron file](config/outpost.cron), but you can run it on any server with Uravo installed by adding it to the crontab:
 ```
-	[~]# (crontab -l; echo "* * * * * /opt/uravo/bin/remote_agent.pl") | crontab -
+    [~]# (crontab -l; echo "* * * * * /opt/uravo/bin/remote_agent.pl") | crontab -
 ```
 Remote agents automatically load balance within a silo, so there's not danger running it on multiple servers.
 
@@ -206,35 +209,35 @@ few of the key settings.
 
 Make a note of the Uravo version before the update:  
 ```
-	[~]# cat /opt/uravo/config/version.txt 
-	0.0.4  
+    [~]# cat /opt/uravo/config/version.txt 
+    0.0.4  
 ```
 Update the RPM to the latest
 version, and make a note of the new version:  
 ```
-	[~]# yum update http://uravo.org/uravo-latest.noarch.rpm
-	[~]# cat /usr/local/uravo/config/version.txt 
-	0.0.7
+    [~]# yum update http://uravo.org/uravo-latest.noarch.rpm
+    [~]# cat /usr/local/uravo/config/version.txt 
+    0.0.7
 ```
 The config directory contains database update files with the changes that need to be applied for each RPM
 upgrade:  [~]
 ```
-	[~]# ls -la /opt/uravo/config/db-update*
-	/opt/uravo/config/db-update-0.0.3.sql 
-	/opt/uravo/config/db-update-0.0.4.sql 
-	/opt/uravo/config/db-update-0.0.5.sql
-	/opt/uravo/config/db-update-0.0.6.sql  
+    [~]# ls -la /opt/uravo/config/db-update*
+    /opt/uravo/config/db-update-0.0.3.sql 
+    /opt/uravo/config/db-update-0.0.4.sql 
+    /opt/uravo/config/db-update-0.0.5.sql
+    /opt/uravo/config/db-update-0.0.6.sql  
 ```
 
 As you can see, some versions did not include database updates. For this example, since we've gone from version 0.0.4 to version 0.0.7, only the updates for versions 0.0.5 and 0.0.6 need to be applied (presumably, the 0.0.4 changes were applied previously, and there were no database updates required specifically for version 0.0.7). Apply the changes by piping the contents of the files to mysql:
 ```
-	[~]# cat /opt/uravo/config/db-update-0.0.5.sql | mysql
-	[~]# cat /opt/uravo/config/db-update-0.0.7.sql | mysql
+    [~]# cat /opt/uravo/config/db-update-0.0.5.sql | mysql
+    [~]# cat /opt/uravo/config/db-update-0.0.7.sql | mysql
 ```
 Kill the control and outpost processes on the appropriate servers:  
 ```
-	[~]# killall outpost.pl 
-	[~]# killall control.pl  
+    [~]# killall outpost.pl 
+    [~]# killall control.pl  
 ```
 
 The cron should restart these services automatically within a minute.
