@@ -19,15 +19,15 @@ sub new {
     return unless ($type_data);
 
     foreach my $key (keys %{$type_data}) {
-        $self->{type_fields}  .= "$key ";
+        $self->{type_fields} .= "$key ";
         $self->{$key} = $type_data->{$key};
     }
 
-    my $proc_data = $uravo->{db}->selectall_arrayref("SELECT * FROM type_process WHERE type_id=?", {Slice=>{}}, ( $type_id )) || die ($uravo->{db}->errstr);
+    my $proc_data = $uravo->{db}->selectall_arrayref("SELECT process_id as proc_id, red, yellow FROM type_process WHERE type_id=?", {Slice=>{}}, ( $type_id )) || die ($uravo->{db}->errstr);
     foreach my $proc (@$proc_data) {
-        $self->{procs}{$proc->{process_id}} = $proc;
+        $self->{procs}{$proc->{proc_id}} = $proc;
     }
-    $self->{object_type} =  'type';
+    $self->{object_type} = 'type';
     bless $self;
     return $self;
 }
@@ -70,14 +70,36 @@ sub getClusters {
     return $uravo->getClusters($local_params);
 }
 
+sub info {
+    my $self = shift || die;
+
+    my $output = "";
+    $output .= "name:" . $self->id() . "\n";
+    $output .= "auto_id_type:" . $self->get('auto_id_type') . "\n";
+    $output .= "auto_id_source:" . $self->get('auto_id_source') . "\n";
+    $output .= "auto_id_text:" . $self->get('auto_id_text') . "\n";
+    $output .= "Processes:\n";
+    my $procs = $self->getProcs();
+    for my $proc_id (keys %{$procs}) {
+        $output .= "  " . $proc_id . " (yellow:" . $procs->{$proc_id}{yellow} . "/red:" . $procs->{$proc_id}{red} . ")\n";
+    }
+    $output .= "Modules:\n";
+    my @modules = $self->getModules({id_only=>1});
+    for my $module_id (@modules) {
+        $output .= "  $module_id\n";
+    }
+
+    return $output;
+}
+
 sub _list {
-    my $params	= shift || {};
+    my $params	= Uravo::Util::clean_params(shift || {});
 
     $uravo ||= new Uravo;
     $uravo->log("Uravo::Serverroles::Type::_list()",5);
-    my $type_id = ($params->{type} || $params->{type_id});
-    my $cluster_id = ($params->{cluster} || $params->{cluster_id});
-    my $silo_id = ($params->{silo} || $params->{silo_id});
+    my $type_id = $params->{type_id};
+    my $cluster_id = $params->{cluster_id};
+    my $silo_id = $params->{silo_id};
 
     my $list = $uravo->getCache("Type:_list:$type_id:$cluster_id:$silo_id");
     return keys %$list if ($list);
@@ -305,17 +327,10 @@ sub update {
 
 sub getProcs {
     $uravo->log("Uravo::Serverroles::Type::getProcs()", 8);
-    my $self        = shift || return;
-    my $params	    = shift;
-    my $proc_list;
+    my $self        = shift || die;
+    my $params	    = Uravo::Util::clean_params(shift || {});
 
-    my $type_id = $self->id();
-    my $results = $uravo->{db}->selectall_arrayref('SELECT process_id, red, yellow FROM type_process  WHERE type_id=?', {Slice=>{}}, ($type_id));
-    foreach my $result (@$results) {
-        $proc_list->{$result->{process_id}} = {red=>$result->{red}, yellow=>$result->{yellow}, proc_id=>$result->{process_id}};
-    }
-
-    return $proc_list;
+    return $self->{procs};
 }
         
 sub link {
@@ -355,14 +370,12 @@ sub changelog {
 }
 
 sub getModules {
-    my $self = shift || return;
-    my $params = shift || {};
+    my $self = shift || die;
+    my $params = Uravo::Util::clean_params(shift || {});
 
-    my $tmp_params; 
-    map { $tmp_params->{$_} = $params->{$_} } keys %{$params};
-    $tmp_params->{type_id} = $self->id();
+    $params->{type_id} = $self->id();
 
-    return $uravo->getModules($tmp_params);
+    return $uravo->getModules($params);
 }
 
 sub getLogs {
@@ -376,10 +389,11 @@ sub getLogs {
 }
 
 sub delete {
-    my $params = shift || return;
+    my $params = Uravo::Util::clean_params(shift || die);
     my $changelog = shift || {};
 
-    my $type_id = $params->{type_id} || return;
+    my $type_id = $params->{type_id} || die "no type_id specified";
+    ($type_id eq "unknown") && die "One cannot destroy the unknown."; 
 
     $uravo ||= new Uravo;
 
