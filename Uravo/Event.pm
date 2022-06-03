@@ -118,8 +118,8 @@ sub clear {
     my $username = $ENV{LOGNAME};
     my $serial = $self->{Serial};
 
-    $uravo->{db}->do("UPDATE alert SET ParentIdentifier=NULL where ParentIdentifier='$Identifier'");
-    $uravo->{db}->do("update alert set Severity=0, DeletedBy = '$username' where Serial=$serial");
+    $uravo->{db}->do("UPDATE alert SET ParentIdentifier=NULL where ParentIdentifier=?", undef, ($Identifier));
+    $uravo->{db}->do("update alert set Severity=0, DeletedBy = ? where Serial=$serial", undef, ($username));
     $uravo->{db}->do("INSERT INTO alert_journal (Serial, user_id, entry, create_date) VALUES (?, ?, ?, NOW())", undef, ($serial, $username, "Alert cleared by $username."));
     return;
 }
